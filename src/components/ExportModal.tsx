@@ -68,7 +68,7 @@ const ExportModal = ({ transactions, onClose }: ExportModalProps) => {
     }
     
     // Category Breakdown
-    const categoryTotals = {};
+    const categoryTotals: Record<string, number> = {};
     transactions.forEach(transaction => {
       const key = `${transaction.category} (${transaction.type})`;
       categoryTotals[key] = (categoryTotals[key] || 0) + transaction.amount;
