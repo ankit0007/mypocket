@@ -76,7 +76,7 @@ const TransactionList = ({ transactions, categories, onDeleteTransaction }: Tran
                       <span className={`font-medium ${
                         transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
                       }`}>
-                        {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toFixed(2)}
+                        {transaction.type === 'income' ? '+' : '-'}₹{transaction.amount.toFixed(2)}
                       </span>
                       <span className="text-sm text-gray-500">{formatDate(transaction.date)}</span>
                     </div>
