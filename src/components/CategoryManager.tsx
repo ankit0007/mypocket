@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +11,6 @@ interface Category {
   id: number;
   name: string;
   color: string;
-  user_id: string;
   created_at: string;
 }
 
@@ -21,9 +19,6 @@ interface CategoryManagerProps {
   onClose: () => void;
   onCategoriesUpdate: (categories: Category[]) => void;
 }
-
-// Use a fixed user ID for demo purposes since we don't have authentication
-const DEMO_USER_ID = "demo-user-123";
 
 const CategoryManager = ({ categories, onClose, onCategoriesUpdate }: CategoryManagerProps) => {
   const [formData, setFormData] = useState({
@@ -48,7 +43,6 @@ const CategoryManager = ({ categories, onClose, onCategoriesUpdate }: CategoryMa
         .insert({
           name: formData.name.trim(),
           color: formData.color,
-          user_id: DEMO_USER_ID,
         })
         .select();
 

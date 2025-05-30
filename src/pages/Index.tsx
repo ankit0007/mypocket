@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,14 +20,12 @@ interface Transaction {
   date: string;
   created_at: string;
   type: 'expense' | 'income';
-  user_id: string;
 }
 
 interface Category {
   id: number;
   name: string;
   color: string;
-  user_id: string;
   created_at: string;
 }
 
@@ -95,11 +92,11 @@ const Index = () => {
 
   const createDefaultCategories = async () => {
     const defaultCategories = [
-      { name: 'Food', color: '#FF6B6B', user_id: DEMO_USER_ID },
-      { name: 'Transport', color: '#4ECDC4', user_id: DEMO_USER_ID },
-      { name: 'Entertainment', color: '#45B7D1', user_id: DEMO_USER_ID },
-      { name: 'Salary', color: '#96CEB4', user_id: DEMO_USER_ID },
-      { name: 'Other', color: '#FFEAA7', user_id: DEMO_USER_ID }
+      { name: 'Food', color: '#FF6B6B' },
+      { name: 'Transport', color: '#4ECDC4' },
+      { name: 'Entertainment', color: '#45B7D1' },
+      { name: 'Salary', color: '#96CEB4' },
+      { name: 'Other', color: '#FFEAA7' }
     ];
 
     try {
@@ -172,8 +169,7 @@ const Index = () => {
           category_id: newTransaction.category_id,
           description: newTransaction.description || '',
           date: newTransaction.date,
-          type: newTransaction.type,
-          user_id: DEMO_USER_ID
+          type: newTransaction.type
         })
         .select();
 
