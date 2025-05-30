@@ -247,7 +247,8 @@ const Index = () => {
       return {
         ...transaction,
         category: category?.name || 'Unknown',
-        note: transaction.description || ''
+        note: transaction.description || '',
+        type: transaction.type
       };
     });
   };

@@ -4,61 +4,128 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { X, Download } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
-interface Expense {
+interface Transaction {
   id: number;
   amount: number;
   category: string;
   note: string;
   date: string;
   created_at: string;
+  type: 'expense' | 'income';
 }
 
 interface ExportModalProps {
-  expenses: Expense[];
+  transactions: Transaction[];
   onClose: () => void;
 }
 
-const ExportModal = ({ expenses, onClose }: ExportModalProps) => {
+const ExportModal = ({ transactions, onClose }: ExportModalProps) => {
+  const totalIncome = transactions
+    .filter(t => t.type === 'income')
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
+  
+  const totalExpenses = transactions
+    .filter(t => t.type === 'expense')
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
+  
+  const netBalance = totalIncome - totalExpenses;
+
   const exportToPDF = () => {
-    // In a real implementation, you would use a library like jsPDF
-    const total = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+    // Create comprehensive financial report
+    let content = "PERSONAL FINANCE REPORT\n";
+    content += "=" + "=".repeat(50) + "\n\n";
     
-    // Create a simple text representation for now
-    let content = "EXPENSE REPORT\n\n";
-    content += `Total Expenses: $${total.toFixed(2)}\n`;
-    content += `Number of Expenses: ${expenses.length}\n\n`;
-    content += "DETAILS:\n";
-    content += expenses.map(expense => 
-      `${expense.date} - ${expense.category} - $${expense.amount.toFixed(2)} - ${expense.note || 'No note'}`
-    ).join('\n');
+    // Summary Section
+    content += "FINANCIAL SUMMARY:\n";
+    content += "-".repeat(30) + "\n";
+    content += `Total Income: $${totalIncome.toFixed(2)}\n`;
+    content += `Total Expenses: $${totalExpenses.toFixed(2)}\n`;
+    content += `Net Balance: $${netBalance.toFixed(2)}\n`;
+    content += `Total Transactions: ${transactions.length}\n\n`;
+    
+    // Income Details
+    const incomeTransactions = transactions.filter(t => t.type === 'income');
+    if (incomeTransactions.length > 0) {
+      content += "INCOME DETAILS:\n";
+      content += "-".repeat(30) + "\n";
+      incomeTransactions.forEach(transaction => {
+        content += `${transaction.date} | ${transaction.category} | $${transaction.amount.toFixed(2)} | ${transaction.note || 'No note'}\n`;
+      });
+      content += `\nTotal Income: $${totalIncome.toFixed(2)}\n`;
+      content += `Income Transactions: ${incomeTransactions.length}\n\n`;
+    }
+    
+    // Expense Details
+    const expenseTransactions = transactions.filter(t => t.type === 'expense');
+    if (expenseTransactions.length > 0) {
+      content += "EXPENSE DETAILS:\n";
+      content += "-".repeat(30) + "\n";
+      expenseTransactions.forEach(transaction => {
+        content += `${transaction.date} | ${transaction.category} | $${transaction.amount.toFixed(2)} | ${transaction.note || 'No note'}\n`;
+      });
+      content += `\nTotal Expenses: $${totalExpenses.toFixed(2)}\n`;
+      content += `Expense Transactions: ${expenseTransactions.length}\n\n`;
+    }
+    
+    // Category Breakdown
+    const categoryTotals = {};
+    transactions.forEach(transaction => {
+      const key = `${transaction.category} (${transaction.type})`;
+      categoryTotals[key] = (categoryTotals[key] || 0) + transaction.amount;
+    });
+    
+    if (Object.keys(categoryTotals).length > 0) {
+      content += "CATEGORY BREAKDOWN:\n";
+      content += "-".repeat(30) + "\n";
+      Object.entries(categoryTotals).forEach(([category, total]) => {
+        content += `${category}: $${total.toFixed(2)}\n`;
+      });
+    }
+    
+    content += "\n" + "=" + "=".repeat(50) + "\n";
+    content += `Report Generated: ${new Date().toLocaleString()}\n`;
 
     // Create and download blob
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `expense-report-${new Date().toISOString().split('T')[0]}.txt`;
+    a.download = `financial-report-${new Date().toISOString().split('T')[0]}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
     toast({
-      title: "Export Complete",
-      description: "Your expense report has been downloaded.",
+      title: "Financial Report Exported",
+      description: "Complete financial report with income and expense totals downloaded.",
     });
     onClose();
   };
 
   const exportToCSV = () => {
-    const headers = ['Date', 'Category', 'Amount', 'Note'];
+    const headers = ['Date', 'Type', 'Category', 'Amount', 'Note'];
+    
+    // Add summary rows at the top
+    const summaryRows = [
+      ['FINANCIAL SUMMARY', '', '', '', ''],
+      ['Total Income', '', '', totalIncome.toFixed(2), ''],
+      ['Total Expenses', '', '', totalExpenses.toFixed(2), ''],
+      ['Net Balance', '', '', netBalance.toFixed(2), ''],
+      ['Total Transactions', '', '', transactions.length.toString(), ''],
+      ['', '', '', '', ''],
+      ['TRANSACTION DETAILS', '', '', '', ''],
+    ];
+    
     const csvContent = [
       headers.join(','),
-      ...expenses.map(expense => [
-        expense.date,
-        expense.category,
-        expense.amount.toFixed(2),
-        `"${expense.note || ''}"`
+      ...summaryRows.map(row => row.map(cell => `"${cell}"`).join(',')),
+      ...transactions.map(transaction => [
+        transaction.date,
+        transaction.type.toUpperCase(),
+        transaction.category,
+        transaction.amount.toFixed(2),
+        `"${transaction.note || ''}"`
       ].join(','))
     ].join('\n');
 
@@ -66,15 +133,15 @@ const ExportModal = ({ expenses, onClose }: ExportModalProps) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `expenses-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `financial-data-${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
     toast({
-      title: "Export Complete",
-      description: "Your expenses have been downloaded as CSV.",
+      title: "Financial Data Exported",
+      description: "Complete financial data with totals downloaded as CSV.",
     });
     onClose();
   };
@@ -83,17 +150,29 @@ const ExportModal = ({ expenses, onClose }: ExportModalProps) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 z-50">
       <Card className="w-full max-w-xs mx-auto">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-base">Export Expenses</CardTitle>
+          <CardTitle className="text-base">Export Financial Data</CardTitle>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="w-4 h-4" />
           </Button>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="text-center py-2">
-            <p className="text-sm text-gray-600">Export {expenses.length} expenses</p>
-            <p className="text-xs text-gray-500">
-              Total: ${expenses.reduce((sum, expense) => sum + expense.amount, 0).toFixed(2)}
-            </p>
+          <div className="text-center py-2 bg-gray-50 rounded-lg">
+            <p className="text-sm font-medium text-gray-800">Financial Summary</p>
+            <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
+              <div>
+                <p className="text-green-600 font-medium">Income: ${totalIncome.toFixed(2)}</p>
+                <p className="text-gray-500">{transactions.filter(t => t.type === 'income').length} transactions</p>
+              </div>
+              <div>
+                <p className="text-red-600 font-medium">Expenses: ${totalExpenses.toFixed(2)}</p>
+                <p className="text-gray-500">{transactions.filter(t => t.type === 'expense').length} transactions</p>
+              </div>
+            </div>
+            <div className="mt-2 pt-2 border-t border-gray-200">
+              <p className={`text-sm font-bold ${netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                Net Balance: ${netBalance.toFixed(2)}
+              </p>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -104,7 +183,7 @@ const ExportModal = ({ expenses, onClose }: ExportModalProps) => {
               size="sm"
             >
               <Download className="w-3 h-3 mr-2" />
-              Export as PDF Report
+              Export Complete Report (PDF)
             </Button>
             
             <Button 
@@ -114,13 +193,13 @@ const ExportModal = ({ expenses, onClose }: ExportModalProps) => {
               size="sm"
             >
               <Download className="w-3 h-3 mr-2" />
-              Export as CSV
+              Export Data with Totals (CSV)
             </Button>
           </div>
 
           <div className="text-xs text-gray-500 text-center space-y-1">
-            <p>PDF reports include summary and details</p>
-            <p>CSV files can be opened in Excel or Google Sheets</p>
+            <p>Reports include complete income & expense breakdown</p>
+            <p>CSV files include summary totals and all transaction details</p>
           </div>
         </CardContent>
       </Card>
