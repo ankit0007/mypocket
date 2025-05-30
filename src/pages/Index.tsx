@@ -322,7 +322,7 @@ const Index = () => {
             <div className="text-right flex-shrink-0 ml-2">
               <p className="text-xs text-blue-100">Net Balance</p>
               <p className={`text-sm font-bold ${calculateNetBalance() >= 0 ? 'text-green-200' : 'text-red-200'}`}>
-                ${calculateNetBalance().toFixed(2)}
+                ₹{calculateNetBalance().toFixed(2)}
               </p>
             </div>
           </div>
@@ -331,11 +331,11 @@ const Index = () => {
           <div className="grid grid-cols-2 gap-2 mt-3">
             <div className="bg-white/20 rounded-lg p-2 text-center">
               <p className="text-xs text-blue-100">Income</p>
-              <p className="text-sm font-bold text-green-200">${calculateTotalIncome().toFixed(2)}</p>
+              <p className="text-sm font-bold text-green-200">₹{calculateTotalIncome().toFixed(2)}</p>
             </div>
             <div className="bg-white/20 rounded-lg p-2 text-center">
               <p className="text-xs text-blue-100">Expenses</p>
-              <p className="text-sm font-bold text-red-200">${calculateTotalExpenses().toFixed(2)}</p>
+              <p className="text-sm font-bold text-red-200">₹{calculateTotalExpenses().toFixed(2)}</p>
             </div>
           </div>
         </div>

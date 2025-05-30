@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { X, Plus, Minus } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { X, Plus, Minus, IndianRupee } from "lucide-react";
 
 interface Category {
   id: number;
@@ -47,6 +48,8 @@ const TransactionForm = ({ categories, transactionType, onSubmit, onClose }: Tra
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const selectedCategory = categories.find(cat => cat.id.toString() === formData.category_id);
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <Card className="w-full max-w-md mx-auto">
@@ -71,16 +74,20 @@ const TransactionForm = ({ categories, transactionType, onSubmit, onClose }: Tra
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="amount">Amount ($)</Label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={formData.amount}
-                onChange={(e) => handleInputChange("amount", e.target.value)}
-                required
-              />
+              <Label htmlFor="amount">Amount</Label>
+              <div className="relative">
+                <IndianRupee className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={formData.amount}
+                  onChange={(e) => handleInputChange("amount", e.target.value)}
+                  className="pl-10"
+                  required
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -90,26 +97,36 @@ const TransactionForm = ({ categories, transactionType, onSubmit, onClose }: Tra
                   No categories available. Please add a category first.
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  {categories.map((category) => (
-                    <button
-                      key={category.id}
-                      type="button"
-                      onClick={() => handleInputChange("category_id", category.id.toString())}
-                      className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                        formData.category_id === category.id.toString()
-                          ? "border-blue-500 bg-blue-50 text-blue-700"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
-                    >
-                      <div 
-                        className="w-3 h-3 rounded-full mx-auto mb-1" 
-                        style={{ backgroundColor: category.color }}
-                      />
-                      {category.name}
-                    </button>
-                  ))}
-                </div>
+                <Select
+                  value={formData.category_id}
+                  onValueChange={(value) => handleInputChange("category_id", value)}
+                  required
+                >
+                  <SelectTrigger className="w-full">
+                    <div className="flex items-center gap-2">
+                      {selectedCategory && (
+                        <div 
+                          className="w-3 h-3 rounded-full flex-shrink-0" 
+                          style={{ backgroundColor: selectedCategory.color }}
+                        />
+                      )}
+                      <SelectValue placeholder="Select a category" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id.toString()}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: category.color }}
+                          />
+                          {category.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             </div>
 
