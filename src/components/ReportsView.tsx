@@ -4,13 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 
-interface Expense {
+interface Transaction {
   id: number;
   amount: number;
-  category: string;
-  note: string;
+  category_id: number;
+  description: string;
   date: string;
   created_at: string;
+  type: 'expense' | 'income';
 }
 
 interface Category {
@@ -20,44 +21,69 @@ interface Category {
 }
 
 interface ReportsViewProps {
-  expenses: Expense[];
+  transactions: Transaction[];
   categories: Category[];
 }
 
-const ReportsView = ({ expenses, categories }: ReportsViewProps) => {
+const ReportsView = ({ transactions, categories }: ReportsViewProps) => {
   const [activeView, setActiveView] = useState<'daily' | 'category' | 'monthly'>('daily');
 
   // Calculate daily totals for the current month
   const getDailyData = () => {
     const currentMonth = new Date().getMonth();
-    const dailyTotals: { [key: string]: number } = {};
+    const dailyTotals: { [key: string]: { income: number; expenses: number } } = {};
     
-    expenses.forEach(expense => {
-      const expenseDate = new Date(expense.date);
-      if (expenseDate.getMonth() === currentMonth) {
-        const day = expenseDate.getDate().toString();
-        dailyTotals[day] = (dailyTotals[day] || 0) + expense.amount;
+    transactions.forEach(transaction => {
+      const transactionDate = new Date(transaction.date);
+      if (transactionDate.getMonth() === currentMonth) {
+        const day = transactionDate.getDate().toString();
+        if (!dailyTotals[day]) {
+          dailyTotals[day] = { income: 0, expenses: 0 };
+        }
+        if (transaction.type === 'income') {
+          dailyTotals[day].income += transaction.amount;
+        } else {
+          dailyTotals[day].expenses += transaction.amount;
+        }
       }
     });
 
     return Object.entries(dailyTotals)
-      .map(([day, amount]) => ({ day: `Day ${day}`, amount }))
-      .slice(0, 10); // Show last 10 days
+      .map(([day, data]) => ({ 
+        day: `Day ${day}`, 
+        income: data.income,
+        expenses: data.expenses,
+        net: data.income - data.expenses
+      }))
+      .slice(0, 10);
   };
 
   // Calculate category totals
   const getCategoryData = () => {
-    const categoryTotals: { [key: string]: number } = {};
+    const categoryTotals: { [key: string]: { income: number; expenses: number } } = {};
     
-    expenses.forEach(expense => {
-      categoryTotals[expense.category] = (categoryTotals[expense.category] || 0) + expense.amount;
+    transactions.forEach(transaction => {
+      const category = categories.find(cat => cat.id === transaction.category_id);
+      const categoryName = category?.name || 'Unknown';
+      
+      if (!categoryTotals[categoryName]) {
+        categoryTotals[categoryName] = { income: 0, expenses: 0 };
+      }
+      
+      if (transaction.type === 'income') {
+        categoryTotals[categoryName].income += transaction.amount;
+      } else {
+        categoryTotals[categoryName].expenses += transaction.amount;
+      }
     });
 
-    return Object.entries(categoryTotals).map(([category, amount]) => {
+    return Object.entries(categoryTotals).map(([category, data]) => {
       const categoryInfo = categories.find(cat => cat.name === category);
       return {
         category,
-        amount,
+        income: data.income,
+        expenses: data.expenses,
+        net: data.income - data.expenses,
         color: categoryInfo?.color || "#9CA3AF"
       };
     });
@@ -65,23 +91,35 @@ const ReportsView = ({ expenses, categories }: ReportsViewProps) => {
 
   // Calculate monthly totals
   const getMonthlyData = () => {
-    const monthlyTotals: { [key: string]: number } = {};
+    const monthlyTotals: { [key: string]: { income: number; expenses: number } } = {};
     
-    expenses.forEach(expense => {
-      const expenseDate = new Date(expense.date);
-      const monthKey = `${expenseDate.getFullYear()}-${expenseDate.getMonth() + 1}`;
-      monthlyTotals[monthKey] = (monthlyTotals[monthKey] || 0) + expense.amount;
+    transactions.forEach(transaction => {
+      const transactionDate = new Date(transaction.date);
+      const monthKey = `${transactionDate.getFullYear()}-${transactionDate.getMonth() + 1}`;
+      
+      if (!monthlyTotals[monthKey]) {
+        monthlyTotals[monthKey] = { income: 0, expenses: 0 };
+      }
+      
+      if (transaction.type === 'income') {
+        monthlyTotals[monthKey].income += transaction.amount;
+      } else {
+        monthlyTotals[monthKey].expenses += transaction.amount;
+      }
     });
 
-    return Object.entries(monthlyTotals).map(([month, amount]) => ({
+    return Object.entries(monthlyTotals).map(([month, data]) => ({
       month: new Date(month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-      amount
+      income: data.income,
+      expenses: data.expenses,
+      net: data.income - data.expenses
     }));
   };
 
-  const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const averageDaily = totalExpenses / Math.max(1, new Set(expenses.map(e => e.date)).size);
-  const topCategory = getCategoryData().sort((a, b) => b.amount - a.amount)[0];
+  const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+  const totalExpenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+  const netBalance = totalIncome - totalExpenses;
+  const averageDaily = Math.abs(netBalance) / Math.max(1, new Set(transactions.map(e => e.date)).size);
 
   return (
     <div className="space-y-4">
@@ -89,31 +127,22 @@ const ReportsView = ({ expenses, categories }: ReportsViewProps) => {
       <div className="grid grid-cols-2 gap-3">
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-sm text-gray-600">Total Spent</p>
-            <p className="text-xl font-bold text-gray-900">${totalExpenses.toFixed(2)}</p>
+            <p className="text-sm text-gray-600">Total Income</p>
+            <p className="text-xl font-bold text-green-600">${totalIncome.toFixed(2)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-sm text-gray-600">Daily Average</p>
-            <p className="text-xl font-bold text-gray-900">${averageDaily.toFixed(2)}</p>
+            <p className="text-sm text-gray-600">Total Expenses</p>
+            <p className="text-xl font-bold text-red-600">${totalExpenses.toFixed(2)}</p>
           </CardContent>
         </Card>
         <Card className="col-span-2">
           <CardContent className="p-4 text-center">
-            <p className="text-sm text-gray-600">Top Category</p>
-            <div className="flex items-center justify-center mt-1">
-              {topCategory && (
-                <>
-                  <div 
-                    className="w-3 h-3 rounded-full mr-2"
-                    style={{ backgroundColor: topCategory.color }}
-                  />
-                  <span className="font-medium">{topCategory.category}</span>
-                  <span className="ml-2 text-gray-600">${topCategory.amount.toFixed(2)}</span>
-                </>
-              )}
-            </div>
+            <p className="text-sm text-gray-600">Net Balance</p>
+            <p className={`text-xl font-bold ${netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              ${netBalance.toFixed(2)}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -147,9 +176,9 @@ const ReportsView = ({ expenses, categories }: ReportsViewProps) => {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">
-            {activeView === 'daily' && 'Daily Expenses'}
-            {activeView === 'category' && 'Expenses by Category'}
-            {activeView === 'monthly' && 'Monthly Expenses'}
+            {activeView === 'daily' && 'Daily Income vs Expenses'}
+            {activeView === 'category' && 'Income vs Expenses by Category'}
+            {activeView === 'monthly' && 'Monthly Income vs Expenses'}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -160,29 +189,21 @@ const ReportsView = ({ expenses, categories }: ReportsViewProps) => {
                   <XAxis dataKey="day" />
                   <YAxis />
                   <Tooltip />
-                  <Bar dataKey="amount" fill="#3B82F6" radius={4} />
+                  <Bar dataKey="income" fill="#22C55E" radius={4} />
+                  <Bar dataKey="expenses" fill="#EF4444" radius={4} />
                 </BarChart>
               </ResponsiveContainer>
             )}
             
             {activeView === 'category' && (
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={getCategoryData()}
-                    dataKey="amount"
-                    nameKey="category"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    label={({ category, amount }) => `${category}: $${amount.toFixed(2)}`}
-                  >
-                    {getCategoryData().map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
+                <BarChart data={getCategoryData()}>
+                  <XAxis dataKey="category" />
+                  <YAxis />
                   <Tooltip />
-                </PieChart>
+                  <Bar dataKey="income" fill="#22C55E" radius={4} />
+                  <Bar dataKey="expenses" fill="#EF4444" radius={4} />
+                </BarChart>
               </ResponsiveContainer>
             )}
             
@@ -192,7 +213,8 @@ const ReportsView = ({ expenses, categories }: ReportsViewProps) => {
                   <XAxis dataKey="month" />
                   <YAxis />
                   <Tooltip />
-                  <Bar dataKey="amount" fill="#3B82F6" radius={4} />
+                  <Bar dataKey="income" fill="#22C55E" radius={4} />
+                  <Bar dataKey="expenses" fill="#EF4444" radius={4} />
                 </BarChart>
               </ResponsiveContainer>
             )}
