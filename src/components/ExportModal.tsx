@@ -80,43 +80,45 @@ const ExportModal = ({ expenses, onClose }: ExportModalProps) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-md mx-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 z-50">
+      <Card className="w-full max-w-xs mx-auto">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-lg">Export Expenses</CardTitle>
+          <CardTitle className="text-base">Export Expenses</CardTitle>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="w-4 h-4" />
           </Button>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="text-center py-2">
-            <p className="text-gray-600">Export {expenses.length} expenses</p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-600">Export {expenses.length} expenses</p>
+            <p className="text-xs text-gray-500">
               Total: ${expenses.reduce((sum, expense) => sum + expense.amount, 0).toFixed(2)}
             </p>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             <Button 
               onClick={exportToPDF} 
-              className="w-full flex items-center justify-center"
+              className="w-full flex items-center justify-center text-xs"
               variant="outline"
+              size="sm"
             >
-              <Download className="w-4 h-4 mr-2" />
+              <Download className="w-3 h-3 mr-2" />
               Export as PDF Report
             </Button>
             
             <Button 
               onClick={exportToCSV} 
-              className="w-full flex items-center justify-center"
+              className="w-full flex items-center justify-center text-xs"
               variant="outline"
+              size="sm"
             >
-              <Download className="w-4 h-4 mr-2" />
+              <Download className="w-3 h-3 mr-2" />
               Export as CSV
             </Button>
           </div>
 
-          <div className="text-xs text-gray-500 text-center">
+          <div className="text-xs text-gray-500 text-center space-y-1">
             <p>PDF reports include summary and details</p>
             <p>CSV files can be opened in Excel or Google Sheets</p>
           </div>

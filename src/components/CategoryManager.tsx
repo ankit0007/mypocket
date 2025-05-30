@@ -88,73 +88,74 @@ const CategoryManager = ({ categories, onClose, onCategoriesUpdate }: CategoryMa
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-md mx-auto max-h-[80vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 z-50">
+      <Card className="w-full max-w-xs mx-auto max-h-[90vh] overflow-y-auto">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-lg">Manage Categories</CardTitle>
+          <CardTitle className="text-base">Manage Categories</CardTitle>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="w-4 h-4" />
           </Button>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4">
           {/* Add New Category Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Category Name</Label>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="name" className="text-sm">Category Name</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Enter category name"
                 required
+                className="text-sm"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="color">Color</Label>
+            <div className="space-y-1">
+              <Label htmlFor="color" className="text-sm">Color</Label>
               <div className="flex gap-2 items-center">
                 <Input
                   id="color"
                   type="color"
                   value={formData.color}
                   onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
-                  className="w-16 h-10"
+                  className="w-12 h-8 flex-shrink-0"
                 />
-                <span className="text-sm text-gray-600">{formData.color}</span>
+                <span className="text-xs text-gray-600 flex-1 truncate">{formData.color}</span>
               </div>
             </div>
 
-            <Button type="submit" className="w-full">
-              <Plus className="w-4 h-4 mr-2" />
+            <Button type="submit" className="w-full text-xs" size="sm">
+              <Plus className="w-3 h-3 mr-2" />
               Add Category
             </Button>
           </form>
 
           {/* Existing Categories */}
-          <div className="space-y-3">
-            <h3 className="font-medium text-gray-900">Existing Categories</h3>
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-gray-900">Existing Categories</h3>
             {categories.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-4">
+              <p className="text-xs text-gray-500 text-center py-4">
                 No categories yet. Add your first category above.
               </p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1 max-h-48 overflow-y-auto">
                 {categories.map((category) => (
-                  <div key={category.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center space-x-3">
+                  <div key={category.id} className="flex items-center justify-between p-2 border rounded-lg">
+                    <div className="flex items-center space-x-2 flex-1 min-w-0">
                       <div 
-                        className="w-4 h-4 rounded-full" 
+                        className="w-3 h-3 rounded-full flex-shrink-0" 
                         style={{ backgroundColor: category.color }}
                       />
-                      <span className="font-medium">{category.name}</span>
+                      <span className="text-sm font-medium truncate">{category.name}</span>
                     </div>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeleteCategory(category.id)}
-                      className="text-red-500 hover:text-red-700"
+                      className="text-red-500 hover:text-red-700 flex-shrink-0 h-6 w-6 p-0"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3 h-3" />
                     </Button>
                   </div>
                 ))}

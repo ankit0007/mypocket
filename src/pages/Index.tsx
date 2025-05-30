@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -265,86 +266,101 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Mobile App Container */}
-      <div className="max-w-md mx-auto bg-white min-h-screen shadow-xl">
+      <div className="w-full max-w-sm mx-auto bg-white min-h-screen shadow-xl overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-b-lg">
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3 rounded-b-lg">
           <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-xl font-bold">Personal Finance Tracker</h1>
-              <p className="text-blue-100">Track income & expenses</p>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg font-bold truncate">Personal Finance</h1>
+              <p className="text-xs text-blue-100">Track income & expenses</p>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-blue-100">Net Balance</p>
-              <p className={`text-xl font-bold ${calculateNetBalance() >= 0 ? 'text-green-200' : 'text-red-200'}`}>
+            <div className="text-right flex-shrink-0 ml-2">
+              <p className="text-xs text-blue-100">Net Balance</p>
+              <p className={`text-sm font-bold ${calculateNetBalance() >= 0 ? 'text-green-200' : 'text-red-200'}`}>
                 ${calculateNetBalance().toFixed(2)}
               </p>
             </div>
           </div>
           
           {/* Summary Cards */}
-          <div className="grid grid-cols-2 gap-3 mt-4">
-            <div className="bg-white/20 rounded-lg p-3 text-center">
-              <p className="text-sm text-blue-100">Income</p>
-              <p className="text-lg font-bold text-green-200">${calculateTotalIncome().toFixed(2)}</p>
+          <div className="grid grid-cols-2 gap-2 mt-3">
+            <div className="bg-white/20 rounded-lg p-2 text-center">
+              <p className="text-xs text-blue-100">Income</p>
+              <p className="text-sm font-bold text-green-200">${calculateTotalIncome().toFixed(2)}</p>
             </div>
-            <div className="bg-white/20 rounded-lg p-3 text-center">
-              <p className="text-sm text-blue-100">Expenses</p>
-              <p className="text-lg font-bold text-red-200">${calculateTotalExpenses().toFixed(2)}</p>
+            <div className="bg-white/20 rounded-lg p-2 text-center">
+              <p className="text-xs text-blue-100">Expenses</p>
+              <p className="text-sm font-bold text-red-200">${calculateTotalExpenses().toFixed(2)}</p>
             </div>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="p-4 flex gap-2">
-          <Button 
-            onClick={() => handleShowTransactionForm('income')} 
-            className="flex-1 bg-green-500 hover:bg-green-600"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Income
-          </Button>
-          <Button 
-            onClick={() => handleShowTransactionForm('expense')} 
-            className="flex-1 bg-red-500 hover:bg-red-600"
-          >
-            <Minus className="w-4 h-4 mr-2" />
-            Add Expense
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => setShowCategoryManager(true)}
-            className="px-3"
-          >
-            <Settings className="w-4 h-4" />
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => setShowFilterModal(true)}
-            className="px-3"
-          >
-            <Filter className="w-4 h-4" />
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => setShowExportModal(true)}
-            className="px-3"
-          >
-            <Download className="w-4 h-4" />
-          </Button>
+        {/* Action Buttons - More Compact Layout */}
+        <div className="p-3 space-y-2">
+          {/* Primary Actions */}
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => handleShowTransactionForm('income')} 
+              className="flex-1 bg-green-500 hover:bg-green-600 text-xs px-2 py-2"
+              size="sm"
+            >
+              <Plus className="w-3 h-3 mr-1" />
+              Add Income
+            </Button>
+            <Button 
+              onClick={() => handleShowTransactionForm('expense')} 
+              className="flex-1 bg-red-500 hover:bg-red-600 text-xs px-2 py-2"
+              size="sm"
+            >
+              <Minus className="w-3 h-3 mr-1" />
+              Add Expense
+            </Button>
+          </div>
+          
+          {/* Secondary Actions */}
+          <div className="flex gap-1">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowCategoryManager(true)}
+              className="flex-1 text-xs px-2 py-2"
+              size="sm"
+            >
+              <Settings className="w-3 h-3 mr-1" />
+              Categories
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowFilterModal(true)}
+              className="flex-1 text-xs px-2 py-2"
+              size="sm"
+            >
+              <Filter className="w-3 h-3 mr-1" />
+              Filter
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowExportModal(true)}
+              className="flex-1 text-xs px-2 py-2"
+              size="sm"
+            >
+              <Download className="w-3 h-3 mr-1" />
+              Export
+            </Button>
+          </div>
         </div>
 
         {/* Main Content */}
-        <div className="px-4 pb-4">
+        <div className="px-3 pb-4">
           <Tabs defaultValue="transactions" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="transactions">Transactions</TabsTrigger>
-              <TabsTrigger value="reports">
-                <TrendingUp className="w-4 h-4 mr-2" />
+            <TabsList className="grid w-full grid-cols-2 h-8">
+              <TabsTrigger value="transactions" className="text-xs">Transactions</TabsTrigger>
+              <TabsTrigger value="reports" className="text-xs">
+                <TrendingUp className="w-3 h-3 mr-1" />
                 Reports
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="transactions" className="mt-4">
+            <TabsContent value="transactions" className="mt-3">
               <TransactionList 
                 transactions={transactions} 
                 categories={categories}
@@ -352,7 +368,7 @@ const Index = () => {
               />
             </TabsContent>
             
-            <TabsContent value="reports" className="mt-4">
+            <TabsContent value="reports" className="mt-3">
               <ReportsView 
                 transactions={transactions}
                 categories={categories}
