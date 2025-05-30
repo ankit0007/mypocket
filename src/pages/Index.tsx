@@ -122,6 +122,18 @@ const Index = () => {
     setShowTransactionForm(true);
   };
 
+  // Convert transactions to expenses format for ExportModal
+  const convertToExpenses = () => {
+    return transactions.map(transaction => {
+      const category = categories.find(cat => cat.id === transaction.category_id);
+      return {
+        ...transaction,
+        category: category?.name || 'Unknown',
+        note: transaction.description || ''
+      };
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Mobile App Container */}
@@ -250,7 +262,7 @@ const Index = () => {
 
         {showExportModal && (
           <ExportModal
-            expenses={transactions}
+            expenses={convertToExpenses()}
             onClose={() => setShowExportModal(false)}
           />
         )}

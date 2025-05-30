@@ -5,8 +5,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { X, Plus, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 
 interface Category {
   id: number;
@@ -17,15 +15,14 @@ interface Category {
 interface CategoryManagerProps {
   categories: Category[];
   onClose: () => void;
-  userId: string;
+  onCategoriesUpdate: (categories: Category[]) => void;
 }
 
-const CategoryManager = ({ categories, onClose, userId }: CategoryManagerProps) => {
+const CategoryManager = ({ categories, onClose, onCategoriesUpdate }: CategoryManagerProps) => {
   const [formData, setFormData] = useState({
     name: "",
     color: "#9CA3AF",
   });
-  const queryClient = useQueryClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,18 +36,14 @@ const CategoryManager = ({ categories, onClose, userId }: CategoryManagerProps) 
     }
 
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .insert({
-          name: formData.name.trim(),
-          color: formData.color,
-          user_id: userId,
-        })
-        .select();
+      const newCategory: Category = {
+        id: Date.now(),
+        name: formData.name.trim(),
+        color: formData.color,
+      };
       
-      if (error) throw error;
-      
-      queryClient.invalidateQueries({ queryKey: ['categories', userId] });
+      const updatedCategories = [...categories, newCategory];
+      onCategoriesUpdate(updatedCategories);
       
       toast({
         title: "Category Added",
@@ -69,15 +62,8 @@ const CategoryManager = ({ categories, onClose, userId }: CategoryManagerProps) 
 
   const handleDeleteCategory = async (id: number) => {
     try {
-      const { error } = await supabase
-        .from('categories')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', userId);
-      
-      if (error) throw error;
-      
-      queryClient.invalidateQueries({ queryKey: ['categories', userId] });
+      const updatedCategories = categories.filter(cat => cat.id !== id);
+      onCategoriesUpdate(updatedCategories);
       
       toast({
         title: "Category Deleted",
