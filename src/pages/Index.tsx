@@ -5,111 +5,169 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, TrendingUp, Download, Filter } from "lucide-react";
+import { Plus, TrendingUp, Download, Filter, Settings } from "lucide-react";
 import ExpenseForm from "@/components/ExpenseForm";
 import ExpenseList from "@/components/ExpenseList";
 import ReportsView from "@/components/ReportsView";
 import FilterModal from "@/components/FilterModal";
 import ExportModal from "@/components/ExportModal";
+import CategoryManager from "@/components/CategoryManager";
 import { toast } from "@/hooks/use-toast";
-import { useQuery } from "@tanstack/react-query";
-
-// Mock data for demonstration - in real app this would come from Supabase
-const mockExpenses = [
-  { id: 1, amount: 25.50, category: "Food", note: "Lunch at cafe", date: "2025-05-30", created_at: "2025-05-30T12:00:00Z" },
-  { id: 2, amount: 15.00, category: "Transport", note: "Bus fare", date: "2025-05-30", created_at: "2025-05-30T08:00:00Z" },
-  { id: 3, amount: 50.00, category: "Groceries", note: "Weekly shopping", date: "2025-05-29", created_at: "2025-05-29T18:00:00Z" },
-];
-
-const mockCategories = [
-  { id: 1, name: "Food", color: "#FF6B6B" },
-  { id: 2, name: "Transport", color: "#4ECDC4" },
-  { id: 3, name: "Groceries", color: "#45B7D1" },
-  { id: 4, name: "Entertainment", color: "#96CEB4" },
-  { id: 5, name: "Health", color: "#FFEAA7" },
-];
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<any>(null);
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
-  const [expenses, setExpenses] = useState(mockExpenses);
-  const [filteredExpenses, setFilteredExpenses] = useState(mockExpenses);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [activeFilters, setActiveFilters] = useState({ dateRange: 'all', category: 'all' });
+  const queryClient = useQueryClient();
 
-  // Simulate authentication - replace with Supabase auth
+  // Check authentication status
   useEffect(() => {
-    setIsAuthenticated(true);
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setIsAuthenticated(true);
+        setUser(session.user);
+      }
+    };
+    
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        setIsAuthenticated(true);
+        setUser(session.user);
+      } else {
+        setIsAuthenticated(false);
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const handleAddExpense = (newExpense: any) => {
-    const expense = {
-      ...newExpense,
-      id: expenses.length + 1,
-      created_at: new Date().toISOString(),
-    };
-    setExpenses([expense, ...expenses]);
-    setFilteredExpenses([expense, ...filteredExpenses]);
-    toast({
-      title: "Expense Added",
-      description: "Your expense has been successfully recorded.",
-    });
-    setShowExpenseForm(false);
+  // Fetch expenses from Supabase
+  const { data: expenses = [], isLoading: expensesLoading } = useQuery({
+    queryKey: ['transactions', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  // Fetch categories from Supabase
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
+    queryKey: ['categories', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('name');
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const handleSignIn = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      toast({ title: "Signed in successfully!" });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
   };
 
-  const handleDeleteExpense = (id: number) => {
-    const updatedExpenses = expenses.filter(exp => exp.id !== id);
-    setExpenses(updatedExpenses);
-    setFilteredExpenses(updatedExpenses.filter(exp => applyFilters(exp)));
-    toast({
-      title: "Expense Deleted",
-      description: "The expense has been removed.",
-    });
+  const handleSignUp = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) throw error;
+      toast({ title: "Account created! Please check your email." });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
   };
 
-  const applyFilters = (expense: any) => {
-    // Filter logic would be implemented here
-    return true;
+  const handleAddExpense = async (newExpense: any) => {
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .insert({
+          ...newExpense,
+          user_id: user.id,
+        });
+      
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ['transactions', user.id] });
+      toast({
+        title: "Expense Added",
+        description: "Your expense has been successfully recorded.",
+      });
+      setShowExpenseForm(false);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
   };
 
-  const handleFilterChange = (filters: any) => {
-    setActiveFilters(filters);
-    // Apply filters to expenses
-    const filtered = expenses.filter(applyFilters);
-    setFilteredExpenses(filtered);
-    setShowFilterModal(false);
+  const handleDeleteExpense = async (id: number) => {
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ['transactions', user.id] });
+      toast({
+        title: "Expense Deleted",
+        description: "The expense has been removed.",
+      });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
   };
 
   const calculateTotalExpenses = () => {
-    return filteredExpenses.reduce((total, expense) => total + expense.amount, 0);
+    return expenses.reduce((total: number, expense: any) => total + expense.amount, 0);
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
   };
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md shadow-lg">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold text-gray-800">Daily Expense Tracker</CardTitle>
-            <p className="text-gray-600">Track your expenses on the go</p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="Enter your email" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" placeholder="Enter your password" />
-            </div>
-            <Button onClick={() => setIsAuthenticated(true)} className="w-full">
-              Sign In
-            </Button>
-            <p className="text-center text-sm text-gray-600">
-              Don't have an account? <span className="text-blue-600 cursor-pointer">Sign up</span>
-            </p>
-          </CardContent>
-        </Card>
+      <AuthForm onSignIn={handleSignIn} onSignUp={handleSignUp} />
+    );
+  }
+
+  if (expensesLoading || categoriesLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading...</p>
+        </div>
       </div>
     );
   }
@@ -128,6 +186,14 @@ const Index = () => {
             <div className="text-right">
               <p className="text-sm text-blue-100">Total</p>
               <p className="text-xl font-bold">${calculateTotalExpenses().toFixed(2)}</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSignOut}
+                className="text-blue-100 hover:text-white mt-1"
+              >
+                Sign Out
+              </Button>
             </div>
           </div>
         </div>
@@ -140,6 +206,13 @@ const Index = () => {
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Expense
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => setShowCategoryManager(true)}
+            className="px-3"
+          >
+            <Settings className="w-4 h-4" />
           </Button>
           <Button 
             variant="outline" 
@@ -170,16 +243,16 @@ const Index = () => {
             
             <TabsContent value="expenses" className="mt-4">
               <ExpenseList 
-                expenses={filteredExpenses} 
-                categories={mockCategories}
+                expenses={expenses} 
+                categories={categories}
                 onDeleteExpense={handleDeleteExpense}
               />
             </TabsContent>
             
             <TabsContent value="reports" className="mt-4">
               <ReportsView 
-                expenses={filteredExpenses}
-                categories={mockCategories}
+                expenses={expenses}
+                categories={categories}
               />
             </TabsContent>
           </Tabs>
@@ -188,28 +261,101 @@ const Index = () => {
         {/* Modals */}
         {showExpenseForm && (
           <ExpenseForm
-            categories={mockCategories}
+            categories={categories}
             onSubmit={handleAddExpense}
             onClose={() => setShowExpenseForm(false)}
           />
         )}
 
+        {showCategoryManager && (
+          <CategoryManager
+            categories={categories}
+            onClose={() => setShowCategoryManager(false)}
+            userId={user?.id}
+          />
+        )}
+
         {showFilterModal && (
           <FilterModal
-            categories={mockCategories}
+            categories={categories}
             activeFilters={activeFilters}
-            onApplyFilters={handleFilterChange}
+            onApplyFilters={setActiveFilters}
             onClose={() => setShowFilterModal(false)}
           />
         )}
 
         {showExportModal && (
           <ExportModal
-            expenses={filteredExpenses}
+            expenses={expenses}
             onClose={() => setShowExportModal(false)}
           />
         )}
       </div>
+    </div>
+  );
+};
+
+// Auth Form Component
+const AuthForm = ({ onSignIn, onSignUp }: { onSignIn: (email: string, password: string) => void, onSignUp: (email: string, password: string) => void }) => {
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSignUp) {
+      onSignUp(email, password);
+    } else {
+      onSignIn(email, password);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold text-gray-800">Daily Expense Tracker</CardTitle>
+          <p className="text-gray-600">Track your expenses on the go</p>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input 
+                id="email" 
+                type="email" 
+                placeholder="Enter your email" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input 
+                id="password" 
+                type="password" 
+                placeholder="Enter your password" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full">
+              {isSignUp ? "Sign Up" : "Sign In"}
+            </Button>
+            <p className="text-center text-sm text-gray-600">
+              {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+              <span 
+                className="text-blue-600 cursor-pointer hover:underline"
+                onClick={() => setIsSignUp(!isSignUp)}
+              >
+                {isSignUp ? "Sign in" : "Sign up"}
+              </span>
+            </p>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 };

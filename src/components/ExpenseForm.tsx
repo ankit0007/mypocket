@@ -21,21 +21,21 @@ interface ExpenseFormProps {
 const ExpenseForm = ({ categories, onSubmit, onClose }: ExpenseFormProps) => {
   const [formData, setFormData] = useState({
     amount: "",
-    category: "",
-    note: "",
+    category_id: "",
+    description: "",
     date: new Date().toISOString().split('T')[0],
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.amount || !formData.category) {
+    if (!formData.amount || !formData.category_id) {
       return;
     }
     
     onSubmit({
       amount: parseFloat(formData.amount),
-      category: formData.category,
-      note: formData.note,
+      category_id: parseInt(formData.category_id),
+      description: formData.description,
       date: formData.date,
     });
   };
@@ -70,35 +70,41 @@ const ExpenseForm = ({ categories, onSubmit, onClose }: ExpenseFormProps) => {
 
             <div className="space-y-2">
               <Label>Category</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {categories.map((category) => (
-                  <button
-                    key={category.id}
-                    type="button"
-                    onClick={() => handleInputChange("category", category.name)}
-                    className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                      formData.category === category.name
-                        ? "border-blue-500 bg-blue-50 text-blue-700"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                  >
-                    <div 
-                      className="w-3 h-3 rounded-full mx-auto mb-1" 
-                      style={{ backgroundColor: category.color }}
-                    />
-                    {category.name}
-                  </button>
-                ))}
-              </div>
+              {categories.length === 0 ? (
+                <div className="p-3 border border-dashed border-gray-300 rounded-lg text-center text-sm text-gray-500">
+                  No categories available. Please add a category first.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {categories.map((category) => (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() => handleInputChange("category_id", category.id.toString())}
+                      className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                        formData.category_id === category.id.toString()
+                          ? "border-blue-500 bg-blue-50 text-blue-700"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                    >
+                      <div 
+                        className="w-3 h-3 rounded-full mx-auto mb-1" 
+                        style={{ backgroundColor: category.color }}
+                      />
+                      {category.name}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="note">Note (optional)</Label>
+              <Label htmlFor="description">Description (optional)</Label>
               <Input
-                id="note"
-                placeholder="Add a note..."
-                value={formData.note}
-                onChange={(e) => handleInputChange("note", e.target.value)}
+                id="description"
+                placeholder="Add a description..."
+                value={formData.description}
+                onChange={(e) => handleInputChange("description", e.target.value)}
               />
             </div>
 
@@ -117,7 +123,11 @@ const ExpenseForm = ({ categories, onSubmit, onClose }: ExpenseFormProps) => {
               <Button type="button" variant="outline" onClick={onClose} className="flex-1">
                 Cancel
               </Button>
-              <Button type="submit" className="flex-1 bg-green-500 hover:bg-green-600">
+              <Button 
+                type="submit" 
+                className="flex-1 bg-green-500 hover:bg-green-600"
+                disabled={!formData.amount || !formData.category_id || categories.length === 0}
+              >
                 Add Expense
               </Button>
             </div>

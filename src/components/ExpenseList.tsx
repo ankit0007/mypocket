@@ -6,8 +6,8 @@ import { Edit, Trash2 } from "lucide-react";
 interface Expense {
   id: number;
   amount: number;
-  category: string;
-  note: string;
+  category_id: number;
+  description: string;
   date: string;
   created_at: string;
 }
@@ -25,9 +25,9 @@ interface ExpenseListProps {
 }
 
 const ExpenseList = ({ expenses, categories, onDeleteExpense }: ExpenseListProps) => {
-  const getCategoryColor = (categoryName: string) => {
-    const category = categories.find(cat => cat.name === categoryName);
-    return category?.color || "#9CA3AF";
+  const getCategoryInfo = (categoryId: number) => {
+    const category = categories.find(cat => cat.id === categoryId);
+    return category || { name: "Unknown", color: "#9CA3AF" };
   };
 
   const formatDate = (dateString: string) => {
@@ -52,45 +52,48 @@ const ExpenseList = ({ expenses, categories, onDeleteExpense }: ExpenseListProps
 
   return (
     <div className="space-y-3">
-      {expenses.map((expense) => (
-        <Card key={expense.id} className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3 flex-1">
-                <div 
-                  className="w-4 h-4 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: getCategoryColor(expense.category) }}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-gray-900">${expense.amount.toFixed(2)}</span>
-                    <span className="text-sm text-gray-500">{formatDate(expense.date)}</span>
+      {expenses.map((expense) => {
+        const categoryInfo = getCategoryInfo(expense.category_id);
+        return (
+          <Card key={expense.id} className="hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3 flex-1">
+                  <div 
+                    className="w-4 h-4 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: categoryInfo.color }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-gray-900">${expense.amount.toFixed(2)}</span>
+                      <span className="text-sm text-gray-500">{formatDate(expense.date)}</span>
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-sm text-gray-600">{categoryInfo.name}</span>
+                    </div>
+                    {expense.description && (
+                      <p className="text-sm text-gray-500 mt-1 truncate">{expense.description}</p>
+                    )}
                   </div>
-                  <div className="flex items-center justify-between mt-1">
-                    <span className="text-sm text-gray-600">{expense.category}</span>
-                  </div>
-                  {expense.note && (
-                    <p className="text-sm text-gray-500 mt-1 truncate">{expense.note}</p>
-                  )}
+                </div>
+                <div className="flex space-x-1 ml-2">
+                  <Button variant="ghost" size="sm" className="p-2">
+                    <Edit className="w-4 h-4 text-gray-400" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="p-2"
+                    onClick={() => onDeleteExpense(expense.id)}
+                  >
+                    <Trash2 className="w-4 h-4 text-red-400" />
+                  </Button>
                 </div>
               </div>
-              <div className="flex space-x-1 ml-2">
-                <Button variant="ghost" size="sm" className="p-2">
-                  <Edit className="w-4 h-4 text-gray-400" />
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="p-2"
-                  onClick={() => onDeleteExpense(expense.id)}
-                >
-                  <Trash2 className="w-4 h-4 text-red-400" />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 };

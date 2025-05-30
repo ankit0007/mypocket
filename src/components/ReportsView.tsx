@@ -2,8 +2,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 
 interface Expense {
   id: number;
@@ -84,13 +83,6 @@ const ReportsView = ({ expenses, categories }: ReportsViewProps) => {
   const averageDaily = totalExpenses / Math.max(1, new Set(expenses.map(e => e.date)).size);
   const topCategory = getCategoryData().sort((a, b) => b.amount - a.amount)[0];
 
-  const chartConfig = {
-    amount: {
-      label: "Amount",
-      color: "#3B82F6"
-    }
-  };
-
   return (
     <div className="space-y-4">
       {/* Summary Cards */}
@@ -161,13 +153,13 @@ const ReportsView = ({ expenses, categories }: ReportsViewProps) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-64">
+          <div className="h-64">
             {activeView === 'daily' && (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={getDailyData()}>
                   <XAxis dataKey="day" />
                   <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Tooltip />
                   <Bar dataKey="amount" fill="#3B82F6" radius={4} />
                 </BarChart>
               </ResponsiveContainer>
@@ -189,7 +181,7 @@ const ReportsView = ({ expenses, categories }: ReportsViewProps) => {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -199,12 +191,12 @@ const ReportsView = ({ expenses, categories }: ReportsViewProps) => {
                 <BarChart data={getMonthlyData()}>
                   <XAxis dataKey="month" />
                   <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Tooltip />
                   <Bar dataKey="amount" fill="#3B82F6" radius={4} />
                 </BarChart>
               </ResponsiveContainer>
             )}
-          </ChartContainer>
+          </div>
         </CardContent>
       </Card>
     </div>
