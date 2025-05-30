@@ -218,14 +218,59 @@ const Index = () => {
     // The real-time subscription will update the local state
   };
 
+  const getFilteredTransactions = () => {
+    let filtered = transactions;
+
+    // Apply date range filter
+    if (activeFilters.dateRange !== 'all') {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      switch (activeFilters.dateRange) {
+        case 'today':
+          filtered = filtered.filter(t => {
+            const transactionDate = new Date(t.date);
+            return transactionDate >= today;
+          });
+          break;
+        case 'week':
+          const weekAgo = new Date(today);
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          filtered = filtered.filter(t => {
+            const transactionDate = new Date(t.date);
+            return transactionDate >= weekAgo;
+          });
+          break;
+        case 'month':
+          const monthAgo = new Date(today);
+          monthAgo.setMonth(monthAgo.getMonth() - 1);
+          filtered = filtered.filter(t => {
+            const transactionDate = new Date(t.date);
+            return transactionDate >= monthAgo;
+          });
+          break;
+      }
+    }
+
+    // Apply category filter
+    if (activeFilters.category !== 'all') {
+      const selectedCategory = categories.find(cat => cat.name === activeFilters.category);
+      if (selectedCategory) {
+        filtered = filtered.filter(t => t.category_id === selectedCategory.id);
+      }
+    }
+
+    return filtered;
+  };
+
   const calculateTotalExpenses = () => {
-    return transactions
+    return getFilteredTransactions()
       .filter(t => t.type === 'expense')
       .reduce((total: number, transaction) => total + transaction.amount, 0);
   };
 
   const calculateTotalIncome = () => {
-    return transactions
+    return getFilteredTransactions()
       .filter(t => t.type === 'income')
       .reduce((total: number, transaction) => total + transaction.amount, 0);
   };
@@ -239,9 +284,9 @@ const Index = () => {
     setShowTransactionForm(true);
   };
 
-  // Convert transactions to expenses format for ExportModal
+  // Convert transactions to expenses format for ExportModal - use filtered data
   const convertToExpenses = () => {
-    return transactions.map(transaction => {
+    return getFilteredTransactions().map(transaction => {
       const category = categories.find(cat => cat.id === transaction.category_id);
       return {
         ...transaction,
@@ -362,7 +407,7 @@ const Index = () => {
             
             <TabsContent value="transactions" className="mt-3">
               <TransactionList 
-                transactions={transactions} 
+                transactions={getFilteredTransactions()} 
                 categories={categories}
                 onDeleteTransaction={handleDeleteTransaction}
               />
@@ -370,7 +415,7 @@ const Index = () => {
             
             <TabsContent value="reports" className="mt-3">
               <ReportsView 
-                transactions={transactions}
+                transactions={getFilteredTransactions()}
                 categories={categories}
               />
             </TabsContent>
