@@ -21,13 +21,19 @@ interface Transaction {
   date: string;
   created_at: string;
   type: 'expense' | 'income';
+  user_id: string;
 }
 
 interface Category {
   id: number;
   name: string;
   color: string;
+  user_id: string;
+  created_at: string;
 }
+
+// Use a fixed user ID for demo purposes since we don't have authentication
+const DEMO_USER_ID = "demo-user-123";
 
 const Index = () => {
   const [showTransactionForm, setShowTransactionForm] = useState(false);
@@ -66,7 +72,10 @@ const Index = () => {
       if (transactionsError) throw transactionsError;
 
       setCategories(categoriesData || []);
-      setTransactions(transactionsData || []);
+      setTransactions((transactionsData || []).map(t => ({
+        ...t,
+        type: t.type as 'expense' | 'income'
+      })));
 
       // If no categories exist, create default ones
       if (!categoriesData || categoriesData.length === 0) {
@@ -86,11 +95,11 @@ const Index = () => {
 
   const createDefaultCategories = async () => {
     const defaultCategories = [
-      { name: 'Food', color: '#FF6B6B' },
-      { name: 'Transport', color: '#4ECDC4' },
-      { name: 'Entertainment', color: '#45B7D1' },
-      { name: 'Salary', color: '#96CEB4' },
-      { name: 'Other', color: '#FFEAA7' }
+      { name: 'Food', color: '#FF6B6B', user_id: DEMO_USER_ID },
+      { name: 'Transport', color: '#4ECDC4', user_id: DEMO_USER_ID },
+      { name: 'Entertainment', color: '#45B7D1', user_id: DEMO_USER_ID },
+      { name: 'Salary', color: '#96CEB4', user_id: DEMO_USER_ID },
+      { name: 'Other', color: '#FFEAA7', user_id: DEMO_USER_ID }
     ];
 
     try {
@@ -147,7 +156,10 @@ const Index = () => {
       .order('created_at', { ascending: false });
 
     if (!error && data) {
-      setTransactions(data);
+      setTransactions(data.map(t => ({
+        ...t,
+        type: t.type as 'expense' | 'income'
+      })));
     }
   };
 
@@ -160,7 +172,8 @@ const Index = () => {
           category_id: newTransaction.category_id,
           description: newTransaction.description || '',
           date: newTransaction.date,
-          type: newTransaction.type
+          type: newTransaction.type,
+          user_id: DEMO_USER_ID
         })
         .select();
 
