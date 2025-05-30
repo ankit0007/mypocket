@@ -38,9 +38,9 @@ const ExportModal = ({ transactions, onClose }: ExportModalProps) => {
     // Summary Section
     content += "FINANCIAL SUMMARY:\n";
     content += "-".repeat(30) + "\n";
-    content += `Total Income: $${totalIncome.toFixed(2)}\n`;
-    content += `Total Expenses: $${totalExpenses.toFixed(2)}\n`;
-    content += `Net Balance: $${netBalance.toFixed(2)}\n`;
+    content += `Total Income: ₹${totalIncome.toFixed(2)}\n`;
+    content += `Total Expenses: ₹${totalExpenses.toFixed(2)}\n`;
+    content += `Net Balance: ₹${netBalance.toFixed(2)}\n`;
     content += `Total Transactions: ${transactions.length}\n\n`;
     
     // Income Details
@@ -49,9 +49,9 @@ const ExportModal = ({ transactions, onClose }: ExportModalProps) => {
       content += "INCOME DETAILS:\n";
       content += "-".repeat(30) + "\n";
       incomeTransactions.forEach(transaction => {
-        content += `${transaction.date} | ${transaction.category} | $${transaction.amount.toFixed(2)} | ${transaction.note || 'No note'}\n`;
+        content += `${transaction.date} | ${transaction.category} | ₹${transaction.amount.toFixed(2)} | ${transaction.note || 'No note'}\n`;
       });
-      content += `\nTotal Income: $${totalIncome.toFixed(2)}\n`;
+      content += `\nTotal Income: ₹${totalIncome.toFixed(2)}\n`;
       content += `Income Transactions: ${incomeTransactions.length}\n\n`;
     }
     
@@ -61,9 +61,9 @@ const ExportModal = ({ transactions, onClose }: ExportModalProps) => {
       content += "EXPENSE DETAILS:\n";
       content += "-".repeat(30) + "\n";
       expenseTransactions.forEach(transaction => {
-        content += `${transaction.date} | ${transaction.category} | $${transaction.amount.toFixed(2)} | ${transaction.note || 'No note'}\n`;
+        content += `${transaction.date} | ${transaction.category} | ₹${transaction.amount.toFixed(2)} | ${transaction.note || 'No note'}\n`;
       });
-      content += `\nTotal Expenses: $${totalExpenses.toFixed(2)}\n`;
+      content += `\nTotal Expenses: ₹${totalExpenses.toFixed(2)}\n`;
       content += `Expense Transactions: ${expenseTransactions.length}\n\n`;
     }
     
@@ -78,7 +78,7 @@ const ExportModal = ({ transactions, onClose }: ExportModalProps) => {
       content += "CATEGORY BREAKDOWN:\n";
       content += "-".repeat(30) + "\n";
       Object.entries(categoryTotals).forEach(([category, total]) => {
-        content += `${category}: $${total.toFixed(2)}\n`;
+        content += `${category}: ₹${total.toFixed(2)}\n`;
       });
     }
     
@@ -160,17 +160,17 @@ const ExportModal = ({ transactions, onClose }: ExportModalProps) => {
             <p className="text-sm font-medium text-gray-800">Financial Summary</p>
             <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
               <div>
-                <p className="text-green-600 font-medium">Income: ${totalIncome.toFixed(2)}</p>
+                <p className="text-green-600 font-medium">Income: ₹{totalIncome.toFixed(2)}</p>
                 <p className="text-gray-500">{transactions.filter(t => t.type === 'income').length} transactions</p>
               </div>
               <div>
-                <p className="text-red-600 font-medium">Expenses: ${totalExpenses.toFixed(2)}</p>
+                <p className="text-red-600 font-medium">Expenses: ₹{totalExpenses.toFixed(2)}</p>
                 <p className="text-gray-500">{transactions.filter(t => t.type === 'expense').length} transactions</p>
               </div>
             </div>
             <div className="mt-2 pt-2 border-t border-gray-200">
               <p className={`text-sm font-bold ${netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                Net Balance: ${netBalance.toFixed(2)}
+                Net Balance: ₹{netBalance.toFixed(2)}
               </p>
             </div>
           </div>

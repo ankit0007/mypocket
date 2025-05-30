@@ -128,20 +128,20 @@ const ReportsView = ({ transactions, categories }: ReportsViewProps) => {
         <Card>
           <CardContent className="p-4 text-center">
             <p className="text-sm text-gray-600">Total Income</p>
-            <p className="text-xl font-bold text-green-600">${totalIncome.toFixed(2)}</p>
+            <p className="text-xl font-bold text-green-600">₹{totalIncome.toFixed(2)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
             <p className="text-sm text-gray-600">Total Expenses</p>
-            <p className="text-xl font-bold text-red-600">${totalExpenses.toFixed(2)}</p>
+            <p className="text-xl font-bold text-red-600">₹{totalExpenses.toFixed(2)}</p>
           </CardContent>
         </Card>
         <Card className="col-span-2">
           <CardContent className="p-4 text-center">
             <p className="text-sm text-gray-600">Net Balance</p>
             <p className={`text-xl font-bold ${netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              ${netBalance.toFixed(2)}
+              ₹{netBalance.toFixed(2)}
             </p>
           </CardContent>
         </Card>
