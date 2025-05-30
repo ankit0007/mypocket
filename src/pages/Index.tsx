@@ -1,8 +1,6 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, TrendingUp, Download, Filter, Settings, Minus } from "lucide-react";
@@ -13,8 +11,6 @@ import FilterModal from "@/components/FilterModal";
 import ExportModal from "@/components/ExportModal";
 import CategoryManager from "@/components/CategoryManager";
 import { toast } from "@/hooks/use-toast";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 
 interface Transaction {
   id: number;
@@ -23,8 +19,13 @@ interface Transaction {
   description: string;
   date: string;
   created_at: string;
-  user_id: string;
   type: 'expense' | 'income';
+}
+
+interface Category {
+  id: number;
+  name: string;
+  color: string;
 }
 
 const Index = () => {
@@ -34,88 +35,70 @@ const Index = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [activeFilters, setActiveFilters] = useState({ dateRange: 'all', category: 'all' });
-  const queryClient = useQueryClient();
+  
+  // Local storage for transactions and categories (no authentication needed)
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
-  // For demo purposes, we'll use a fixed user ID since login is not required
-  const demoUserId = 'demo-user-123';
-
-  // Fetch transactions from Supabase
-  const { data: transactions = [], isLoading: transactionsLoading } = useQuery({
-    queryKey: ['transactions', demoUserId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', demoUserId)
-        .order('date', { ascending: false });
-      
-      if (error) throw error;
-      return data.map(transaction => ({
-        ...transaction,
-        type: transaction.amount > 0 ? 'income' : 'expense',
-        amount: Math.abs(transaction.amount)
-      }));
-    },
-  });
-
-  // Fetch categories from Supabase
-  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
-    queryKey: ['categories', demoUserId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('user_id', demoUserId)
-        .order('name');
-      
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const handleAddTransaction = async (newTransaction: any) => {
-    try {
-      const amount = newTransaction.type === 'expense' ? -Math.abs(newTransaction.amount) : Math.abs(newTransaction.amount);
-      
-      const { error } = await supabase
-        .from('transactions')
-        .insert({
-          ...newTransaction,
-          amount,
-          user_id: demoUserId,
-        });
-      
-      if (error) throw error;
-      
-      queryClient.invalidateQueries({ queryKey: ['transactions', demoUserId] });
-      toast({
-        title: `${newTransaction.type === 'expense' ? 'Expense' : 'Income'} Added`,
-        description: `Your ${newTransaction.type} has been successfully recorded.`,
-      });
-      setShowTransactionForm(false);
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+  // Load data from localStorage on component mount
+  useEffect(() => {
+    const savedTransactions = localStorage.getItem('finance-transactions');
+    const savedCategories = localStorage.getItem('finance-categories');
+    
+    if (savedTransactions) {
+      setTransactions(JSON.parse(savedTransactions));
     }
+    
+    if (savedCategories) {
+      setCategories(JSON.parse(savedCategories));
+    } else {
+      // Default categories
+      const defaultCategories = [
+        { id: 1, name: 'Food', color: '#FF6B6B' },
+        { id: 2, name: 'Transport', color: '#4ECDC4' },
+        { id: 3, name: 'Entertainment', color: '#45B7D1' },
+        { id: 4, name: 'Salary', color: '#96CEB4' },
+        { id: 5, name: 'Other', color: '#FFEAA7' }
+      ];
+      setCategories(defaultCategories);
+      localStorage.setItem('finance-categories', JSON.stringify(defaultCategories));
+    }
+  }, []);
+
+  // Save to localStorage whenever data changes
+  useEffect(() => {
+    localStorage.setItem('finance-transactions', JSON.stringify(transactions));
+  }, [transactions]);
+
+  useEffect(() => {
+    localStorage.setItem('finance-categories', JSON.stringify(categories));
+  }, [categories]);
+
+  const handleAddTransaction = (newTransaction: any) => {
+    const transaction: Transaction = {
+      id: Date.now(), // Simple ID generation
+      amount: newTransaction.amount,
+      category_id: newTransaction.category_id,
+      description: newTransaction.description || '',
+      date: newTransaction.date,
+      created_at: new Date().toISOString(),
+      type: newTransaction.type
+    };
+
+    setTransactions(prev => [transaction, ...prev]);
+    toast({
+      title: `${newTransaction.type === 'expense' ? 'Expense' : 'Income'} Added`,
+      description: `Your ${newTransaction.type} has been successfully recorded.`,
+    });
+    setShowTransactionForm(false);
   };
 
-  const handleDeleteTransaction = async (id: number) => {
-    try {
-      const { error } = await supabase
-        .from('transactions')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', demoUserId);
-      
-      if (error) throw error;
-      
-      queryClient.invalidateQueries({ queryKey: ['transactions', demoUserId] });
-      toast({
-        title: "Transaction Deleted",
-        description: "The transaction has been removed.",
-      });
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    }
+  const handleDeleteTransaction = (id: number) => {
+    setTransactions(prev => prev.filter(t => t.id !== id));
+    toast({
+      title: "Transaction Deleted",
+      description: "The transaction has been removed.",
+    });
   };
 
   const calculateTotalExpenses = () => {
@@ -139,17 +122,6 @@ const Index = () => {
     setShowTransactionForm(true);
   };
 
-  if (transactionsLoading || categoriesLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Mobile App Container */}
@@ -158,7 +130,7 @@ const Index = () => {
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-b-lg">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-xl font-bold">Finance Tracker</h1>
+              <h1 className="text-xl font-bold">Personal Finance Tracker</h1>
               <p className="text-blue-100">Track income & expenses</p>
             </div>
             <div className="text-right">
@@ -263,7 +235,7 @@ const Index = () => {
           <CategoryManager
             categories={categories}
             onClose={() => setShowCategoryManager(false)}
-            userId={demoUserId}
+            onCategoriesUpdate={setCategories}
           />
         )}
 
