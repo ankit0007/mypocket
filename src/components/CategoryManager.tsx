@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { X, Plus, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Category {
   id: number;
@@ -36,14 +37,15 @@ const CategoryManager = ({ categories, onClose, onCategoriesUpdate }: CategoryMa
     }
 
     try {
-      const newCategory: Category = {
-        id: Date.now(),
-        name: formData.name.trim(),
-        color: formData.color,
-      };
-      
-      const updatedCategories = [...categories, newCategory];
-      onCategoriesUpdate(updatedCategories);
+      const { data, error } = await supabase
+        .from('categories')
+        .insert({
+          name: formData.name.trim(),
+          color: formData.color,
+        })
+        .select();
+
+      if (error) throw error;
       
       toast({
         title: "Category Added",
@@ -52,9 +54,10 @@ const CategoryManager = ({ categories, onClose, onCategoriesUpdate }: CategoryMa
 
       setFormData({ name: "", color: "#9CA3AF" });
     } catch (error: any) {
+      console.error('Error adding category:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: "Failed to add category.",
         variant: "destructive",
       });
     }
@@ -62,17 +65,22 @@ const CategoryManager = ({ categories, onClose, onCategoriesUpdate }: CategoryMa
 
   const handleDeleteCategory = async (id: number) => {
     try {
-      const updatedCategories = categories.filter(cat => cat.id !== id);
-      onCategoriesUpdate(updatedCategories);
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
       
       toast({
         title: "Category Deleted",
         description: "The category has been removed.",
       });
     } catch (error: any) {
+      console.error('Error deleting category:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: "Failed to delete category.",
         variant: "destructive",
       });
     }

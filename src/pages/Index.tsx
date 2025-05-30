@@ -11,6 +11,7 @@ import FilterModal from "@/components/FilterModal";
 import ExportModal from "@/components/ExportModal";
 import CategoryManager from "@/components/CategoryManager";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Transaction {
   id: number;
@@ -36,69 +37,176 @@ const Index = () => {
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [activeFilters, setActiveFilters] = useState({ dateRange: 'all', category: 'all' });
   
-  // Local storage for transactions and categories (no authentication needed)
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Load data from localStorage on component mount
+  // Load data from Supabase on component mount
   useEffect(() => {
-    const savedTransactions = localStorage.getItem('finance-transactions');
-    const savedCategories = localStorage.getItem('finance-categories');
-    
-    if (savedTransactions) {
-      setTransactions(JSON.parse(savedTransactions));
-    }
-    
-    if (savedCategories) {
-      setCategories(JSON.parse(savedCategories));
-    } else {
-      // Default categories
-      const defaultCategories = [
-        { id: 1, name: 'Food', color: '#FF6B6B' },
-        { id: 2, name: 'Transport', color: '#4ECDC4' },
-        { id: 3, name: 'Entertainment', color: '#45B7D1' },
-        { id: 4, name: 'Salary', color: '#96CEB4' },
-        { id: 5, name: 'Other', color: '#FFEAA7' }
-      ];
-      setCategories(defaultCategories);
-      localStorage.setItem('finance-categories', JSON.stringify(defaultCategories));
-    }
+    loadData();
+    setupRealtimeSubscriptions();
   }, []);
 
-  // Save to localStorage whenever data changes
-  useEffect(() => {
-    localStorage.setItem('finance-transactions', JSON.stringify(transactions));
-  }, [transactions]);
+  const loadData = async () => {
+    try {
+      // Load categories
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('categories')
+        .select('*')
+        .order('id');
 
-  useEffect(() => {
-    localStorage.setItem('finance-categories', JSON.stringify(categories));
-  }, [categories]);
+      if (categoriesError) throw categoriesError;
 
-  const handleAddTransaction = (newTransaction: any) => {
-    const transaction: Transaction = {
-      id: Date.now(), // Simple ID generation
-      amount: newTransaction.amount,
-      category_id: newTransaction.category_id,
-      description: newTransaction.description || '',
-      date: newTransaction.date,
-      created_at: new Date().toISOString(),
-      type: newTransaction.type
-    };
+      // Load transactions
+      const { data: transactionsData, error: transactionsError } = await supabase
+        .from('transactions')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    setTransactions(prev => [transaction, ...prev]);
-    toast({
-      title: `${newTransaction.type === 'expense' ? 'Expense' : 'Income'} Added`,
-      description: `Your ${newTransaction.type} has been successfully recorded.`,
-    });
-    setShowTransactionForm(false);
+      if (transactionsError) throw transactionsError;
+
+      setCategories(categoriesData || []);
+      setTransactions(transactionsData || []);
+
+      // If no categories exist, create default ones
+      if (!categoriesData || categoriesData.length === 0) {
+        await createDefaultCategories();
+      }
+    } catch (error: any) {
+      console.error('Error loading data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load data from database.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeleteTransaction = (id: number) => {
-    setTransactions(prev => prev.filter(t => t.id !== id));
-    toast({
-      title: "Transaction Deleted",
-      description: "The transaction has been removed.",
-    });
+  const createDefaultCategories = async () => {
+    const defaultCategories = [
+      { name: 'Food', color: '#FF6B6B' },
+      { name: 'Transport', color: '#4ECDC4' },
+      { name: 'Entertainment', color: '#45B7D1' },
+      { name: 'Salary', color: '#96CEB4' },
+      { name: 'Other', color: '#FFEAA7' }
+    ];
+
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .insert(defaultCategories)
+        .select();
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error: any) {
+      console.error('Error creating default categories:', error);
+    }
+  };
+
+  const setupRealtimeSubscriptions = () => {
+    // Subscribe to categories changes
+    const categoriesSubscription = supabase
+      .channel('categories-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
+        loadCategories();
+      })
+      .subscribe();
+
+    // Subscribe to transactions changes
+    const transactionsSubscription = supabase
+      .channel('transactions-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
+        loadTransactions();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(categoriesSubscription);
+      supabase.removeChannel(transactionsSubscription);
+    };
+  };
+
+  const loadCategories = async () => {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .order('id');
+
+    if (!error && data) {
+      setCategories(data);
+    }
+  };
+
+  const loadTransactions = async () => {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      setTransactions(data);
+    }
+  };
+
+  const handleAddTransaction = async (newTransaction: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .insert({
+          amount: newTransaction.amount,
+          category_id: newTransaction.category_id,
+          description: newTransaction.description || '',
+          date: newTransaction.date,
+          type: newTransaction.type
+        })
+        .select();
+
+      if (error) throw error;
+
+      toast({
+        title: `${newTransaction.type === 'expense' ? 'Expense' : 'Income'} Added`,
+        description: `Your ${newTransaction.type} has been successfully recorded.`,
+      });
+      setShowTransactionForm(false);
+    } catch (error: any) {
+      console.error('Error adding transaction:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add transaction.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteTransaction = async (id: number) => {
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Transaction Deleted",
+        description: "The transaction has been removed.",
+      });
+    } catch (error: any) {
+      console.error('Error deleting transaction:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete transaction.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCategoriesUpdate = async (updatedCategories: Category[]) => {
+    // This will be handled by the CategoryManager component directly
+    // The real-time subscription will update the local state
   };
 
   const calculateTotalExpenses = () => {
@@ -133,6 +241,17 @@ const Index = () => {
       };
     });
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading your finance data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -247,7 +366,7 @@ const Index = () => {
           <CategoryManager
             categories={categories}
             onClose={() => setShowCategoryManager(false)}
-            onCategoriesUpdate={setCategories}
+            onCategoriesUpdate={handleCategoriesUpdate}
           />
         )}
 
