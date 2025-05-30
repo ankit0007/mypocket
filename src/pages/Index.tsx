@@ -148,7 +148,7 @@ const Index = () => {
   };
 
   const calculateTotalExpenses = () => {
-    return expenses.reduce((total: number, expense: any) => total + expense.amount, 0);
+    return expenses.reduce((total: number, expense: any) => total + parseFloat(expense.amount), 0);
   };
 
   const handleSignOut = async () => {
