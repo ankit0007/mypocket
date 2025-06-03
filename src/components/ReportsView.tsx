@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
+import DateRangeFilter from "./DateRangeFilter";
 
 interface Transaction {
   id: number;
@@ -27,42 +28,60 @@ interface ReportsViewProps {
 
 const ReportsView = ({ transactions, categories }: ReportsViewProps) => {
   const [activeView, setActiveView] = useState<'daily' | 'category' | 'monthly'>('daily');
+  const [dateFilter, setDateFilter] = useState({ type: 'all' });
 
-  // Calculate daily totals for the current month
+  // Filter transactions based on date range
+  const getFilteredTransactions = () => {
+    if (dateFilter.type === 'all') {
+      return transactions;
+    }
+
+    return transactions.filter(transaction => {
+      const transactionDate = new Date(transaction.date);
+      const startDate = dateFilter.startDate ? new Date(dateFilter.startDate) : null;
+      const endDate = dateFilter.endDate ? new Date(dateFilter.endDate) : null;
+
+      if (startDate && endDate) {
+        return transactionDate >= startDate && transactionDate <= endDate;
+      }
+      return true;
+    });
+  };
+
+  const filteredTransactions = getFilteredTransactions();
+
+  // Calculate daily totals for the filtered period
   const getDailyData = () => {
-    const currentMonth = new Date().getMonth();
     const dailyTotals: { [key: string]: { income: number; expenses: number } } = {};
     
-    transactions.forEach(transaction => {
-      const transactionDate = new Date(transaction.date);
-      if (transactionDate.getMonth() === currentMonth) {
-        const day = transactionDate.getDate().toString();
-        if (!dailyTotals[day]) {
-          dailyTotals[day] = { income: 0, expenses: 0 };
-        }
-        if (transaction.type === 'income') {
-          dailyTotals[day].income += transaction.amount;
-        } else {
-          dailyTotals[day].expenses += transaction.amount;
-        }
+    filteredTransactions.forEach(transaction => {
+      const day = transaction.date;
+      if (!dailyTotals[day]) {
+        dailyTotals[day] = { income: 0, expenses: 0 };
+      }
+      if (transaction.type === 'income') {
+        dailyTotals[day].income += transaction.amount;
+      } else {
+        dailyTotals[day].expenses += transaction.amount;
       }
     });
 
     return Object.entries(dailyTotals)
       .map(([day, data]) => ({ 
-        day: `Day ${day}`, 
+        day: new Date(day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), 
         income: data.income,
         expenses: data.expenses,
         net: data.income - data.expenses
       }))
-      .slice(0, 10);
+      .sort((a, b) => new Date(a.day).getTime() - new Date(b.day).getTime())
+      .slice(-15); // Show last 15 days
   };
 
-  // Calculate category totals
+  // Calculate category totals for filtered data
   const getCategoryData = () => {
     const categoryTotals: { [key: string]: { income: number; expenses: number } } = {};
     
-    transactions.forEach(transaction => {
+    filteredTransactions.forEach(transaction => {
       const category = categories.find(cat => cat.id === transaction.category_id);
       const categoryName = category?.name || 'Unknown';
       
@@ -89,11 +108,11 @@ const ReportsView = ({ transactions, categories }: ReportsViewProps) => {
     });
   };
 
-  // Calculate monthly totals
+  // Calculate monthly totals for filtered data
   const getMonthlyData = () => {
     const monthlyTotals: { [key: string]: { income: number; expenses: number } } = {};
     
-    transactions.forEach(transaction => {
+    filteredTransactions.forEach(transaction => {
       const transactionDate = new Date(transaction.date);
       const monthKey = `${transactionDate.getFullYear()}-${transactionDate.getMonth() + 1}`;
       
@@ -116,24 +135,26 @@ const ReportsView = ({ transactions, categories }: ReportsViewProps) => {
     }));
   };
 
-  const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-  const totalExpenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+  const totalIncome = filteredTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+  const totalExpenses = filteredTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
   const netBalance = totalIncome - totalExpenses;
-  const averageDaily = Math.abs(netBalance) / Math.max(1, new Set(transactions.map(e => e.date)).size);
 
   return (
     <div className="space-y-4">
+      {/* Date Range Filter */}
+      <DateRangeFilter onFilterChange={setDateFilter} initialFilter={dateFilter} />
+
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-3">
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-sm text-gray-600">Total Income</p>
+            <p className="text-sm text-gray-600">Filtered Income</p>
             <p className="text-xl font-bold text-green-600">₹{totalIncome.toFixed(2)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-sm text-gray-600">Total Expenses</p>
+            <p className="text-sm text-gray-600">Filtered Expenses</p>
             <p className="text-xl font-bold text-red-600">₹{totalExpenses.toFixed(2)}</p>
           </CardContent>
         </Card>
@@ -142,6 +163,9 @@ const ReportsView = ({ transactions, categories }: ReportsViewProps) => {
             <p className="text-sm text-gray-600">Net Balance</p>
             <p className={`text-xl font-bold ${netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               ₹{netBalance.toFixed(2)}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              {filteredTransactions.length} transactions in selected period
             </p>
           </CardContent>
         </Card>
@@ -183,40 +207,51 @@ const ReportsView = ({ transactions, categories }: ReportsViewProps) => {
         </CardHeader>
         <CardContent>
           <div className="h-64">
-            {activeView === 'daily' && (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={getDailyData()}>
-                  <XAxis dataKey="day" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="income" fill="#22C55E" radius={4} />
-                  <Bar dataKey="expenses" fill="#EF4444" radius={4} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-            
-            {activeView === 'category' && (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={getCategoryData()}>
-                  <XAxis dataKey="category" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="income" fill="#22C55E" radius={4} />
-                  <Bar dataKey="expenses" fill="#EF4444" radius={4} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-            
-            {activeView === 'monthly' && (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={getMonthlyData()}>
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="income" fill="#22C55E" radius={4} />
-                  <Bar dataKey="expenses" fill="#EF4444" radius={4} />
-                </BarChart>
-              </ResponsiveContainer>
+            {filteredTransactions.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-gray-500">
+                <div className="text-center">
+                  <p>No data available for selected date range</p>
+                  <p className="text-sm">Try adjusting your date filter</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                {activeView === 'daily' && (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={getDailyData()}>
+                      <XAxis dataKey="day" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="income" fill="#22C55E" radius={4} />
+                      <Bar dataKey="expenses" fill="#EF4444" radius={4} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+                
+                {activeView === 'category' && (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={getCategoryData()}>
+                      <XAxis dataKey="category" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="income" fill="#22C55E" radius={4} />
+                      <Bar dataKey="expenses" fill="#EF4444" radius={4} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+                
+                {activeView === 'monthly' && (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={getMonthlyData()}>
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="income" fill="#22C55E" radius={4} />
+                      <Bar dataKey="expenses" fill="#EF4444" radius={4} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </>
             )}
           </div>
         </CardContent>
