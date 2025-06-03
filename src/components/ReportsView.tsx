@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, PieChart, Pie, Cell } from "recharts";
 import DateRangeFilter from "./DateRangeFilter";
 
 interface Transaction {
@@ -86,6 +86,45 @@ const ReportsView = ({ transactions, categories }: ReportsViewProps) => {
       .slice(-15); // Show last 15 days
   };
 
+  // Calculate category-wise data
+  const getCategoryData = () => {
+    const categoryTotals: {
+      [key: number]: {
+        income: number;
+        expenses: number;
+      };
+    } = {};
+
+    filteredTransactions.forEach(transaction => {
+      const categoryId = transaction.category_id;
+      if (!categoryTotals[categoryId]) {
+        categoryTotals[categoryId] = {
+          income: 0,
+          expenses: 0
+        };
+      }
+      if (transaction.type === 'income') {
+        categoryTotals[categoryId].income += transaction.amount;
+      } else {
+        categoryTotals[categoryId].expenses += transaction.amount;
+      }
+    });
+
+    return Object.entries(categoryTotals)
+      .map(([categoryId, data]) => {
+        const category = categories.find(c => c.id === parseInt(categoryId));
+        return {
+          category: category?.name || 'Unknown',
+          color: category?.color || '#9CA3AF',
+          income: data.income,
+          expenses: data.expenses,
+          total: data.income + data.expenses
+        };
+      })
+      .filter(item => item.total > 0)
+      .sort((a, b) => b.total - a.total);
+  };
+
   const totalIncome = filteredTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
   const totalExpenses = filteredTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
   const netBalance = totalIncome - totalExpenses;
@@ -122,10 +161,10 @@ const ReportsView = ({ transactions, categories }: ReportsViewProps) => {
         </Card>
       </div>
 
-      {/* Chart */}
+      {/* Daily Chart */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Income vs Expenses</CardTitle>
+          <CardTitle className="text-lg">Daily Income vs Expenses</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-64">
@@ -145,6 +184,46 @@ const ReportsView = ({ transactions, categories }: ReportsViewProps) => {
                   <Bar dataKey="income" fill="#22C55E" radius={4} />
                   <Bar dataKey="expenses" fill="#EF4444" radius={4} />
                 </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Category Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Category Breakdown</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64">
+            {getCategoryData().length === 0 ? (
+              <div className="h-full flex items-center justify-center text-gray-500">
+                <div className="text-center">
+                  <p>No category data available</p>
+                  <p className="text-sm">Try adjusting your date filter</p>
+                </div>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={getCategoryData()}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    dataKey="total"
+                    label={({ category, total }) => `${category}: ₹${total.toFixed(0)}`}
+                    labelLine={false}
+                  >
+                    {getCategoryData().map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value: any) => [`₹${value.toFixed(2)}`, 'Total Amount']}
+                  />
+                </PieChart>
               </ResponsiveContainer>
             )}
           </div>
