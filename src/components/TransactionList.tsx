@@ -64,31 +64,31 @@ const TransactionList = ({ transactions, categories, onDeleteTransaction, onEdit
         return (
           <Card key={transaction.id} className="hover:shadow-md transition-shadow">
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3 flex-1">
-                  <div className="flex items-center">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start space-x-3 flex-1 min-w-0">
+                  <div className="flex items-center flex-shrink-0 mt-1">
                     {transaction.type === 'income' ? (
                       <TrendingUp className="w-4 h-4 text-green-500 mr-2" />
                     ) : (
                       <TrendingDown className="w-4 h-4 text-red-500 mr-2" />
                     )}
                     <div 
-                      className="w-4 h-4 rounded-full flex-shrink-0"
+                      className="w-4 h-4 rounded-full"
                       style={{ backgroundColor: categoryInfo.color }}
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-1">
                       <span className={`font-medium ${
                         transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
                       }`}>
                         {transaction.type === 'income' ? '+' : '-'}₹{transaction.amount.toFixed(2)}
                       </span>
-                      <span className="text-sm text-gray-500">{formatDate(transaction.date)}</span>
+                      <span className="text-sm text-gray-500 flex-shrink-0">{formatDate(transaction.date)}</span>
                     </div>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="text-sm text-gray-600">{categoryInfo.name}</span>
-                      <span className={`text-xs px-2 py-1 rounded-full ${
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm text-gray-600 truncate">{categoryInfo.name}</span>
+                      <span className={`text-xs px-2 py-1 rounded-full flex-shrink-0 ${
                         transaction.type === 'income' 
                           ? 'bg-green-100 text-green-700' 
                           : 'bg-red-100 text-red-700'
@@ -97,15 +97,15 @@ const TransactionList = ({ transactions, categories, onDeleteTransaction, onEdit
                       </span>
                     </div>
                     {transaction.description && (
-                      <p className="text-sm text-gray-500 mt-1 truncate">{transaction.description}</p>
+                      <p className="text-sm text-gray-500 break-words pr-2">{transaction.description}</p>
                     )}
                   </div>
                 </div>
-                <div className="flex space-x-1 ml-2">
+                <div className="flex flex-col space-y-1 flex-shrink-0">
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="p-2"
+                    className="p-2 h-8 w-8"
                     onClick={() => onEditTransaction?.(transaction)}
                   >
                     <Edit className="w-4 h-4 text-gray-400" />
@@ -113,7 +113,7 @@ const TransactionList = ({ transactions, categories, onDeleteTransaction, onEdit
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="p-2"
+                    className="p-2 h-8 w-8"
                     onClick={() => onDeleteTransaction(transaction.id)}
                   >
                     <Trash2 className="w-4 h-4 text-red-400" />
