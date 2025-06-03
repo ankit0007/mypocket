@@ -20,7 +20,7 @@ const DateRangeFilter = ({ onFilterChange, initialFilter }: DateRangeFilterProps
     setFilterType(type);
     
     const today = new Date();
-    let filter = { type };
+    let filter: { type: string; startDate?: string; endDate?: string } = { type };
     
     switch (type) {
       case 'today':

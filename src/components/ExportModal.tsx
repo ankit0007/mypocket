@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +21,9 @@ interface ExportModalProps {
 }
 
 const ExportModal = ({ transactions, onClose }: ExportModalProps) => {
-  const [dateFilter, setDateFilter] = useState({ type: 'all' });
+  const [dateFilter, setDateFilter] = useState<{ type: string; startDate?: string; endDate?: string }>({ 
+    type: 'all' 
+  });
 
   // Filter transactions based on date range
   const getFilteredTransactions = () => {
