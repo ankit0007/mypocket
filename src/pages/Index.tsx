@@ -35,6 +35,7 @@ const DEMO_USER_ID = "demo-user-123";
 const Index = () => {
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [transactionType, setTransactionType] = useState<'expense' | 'income'>('expense');
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
@@ -162,29 +163,54 @@ const Index = () => {
 
   const handleAddTransaction = async (newTransaction: any) => {
     try {
-      const { data, error } = await supabase
-        .from('transactions')
-        .insert({
-          amount: newTransaction.amount,
-          category_id: newTransaction.category_id,
-          description: newTransaction.description || '',
-          date: newTransaction.date,
-          type: newTransaction.type
-        })
-        .select();
+      if (newTransaction.id) {
+        // Update existing transaction
+        const { data, error } = await supabase
+          .from('transactions')
+          .update({
+            amount: newTransaction.amount,
+            category_id: newTransaction.category_id,
+            description: newTransaction.description || '',
+            date: newTransaction.date,
+            type: newTransaction.type
+          })
+          .eq('id', newTransaction.id)
+          .select();
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast({
-        title: `${newTransaction.type === 'expense' ? 'Expense' : 'Income'} Added`,
-        description: `Your ${newTransaction.type} has been successfully recorded.`,
-      });
+        toast({
+          title: `${newTransaction.type === 'expense' ? 'Expense' : 'Income'} Updated`,
+          description: `Your ${newTransaction.type} has been successfully updated.`,
+        });
+      } else {
+        // Create new transaction
+        const { data, error } = await supabase
+          .from('transactions')
+          .insert({
+            amount: newTransaction.amount,
+            category_id: newTransaction.category_id,
+            description: newTransaction.description || '',
+            date: newTransaction.date,
+            type: newTransaction.type
+          })
+          .select();
+
+        if (error) throw error;
+
+        toast({
+          title: `${newTransaction.type === 'expense' ? 'Expense' : 'Income'} Added`,
+          description: `Your ${newTransaction.type} has been successfully recorded.`,
+        });
+      }
+      
       setShowTransactionForm(false);
+      setEditingTransaction(null);
     } catch (error: any) {
-      console.error('Error adding transaction:', error);
+      console.error('Error saving transaction:', error);
       toast({
         title: "Error",
-        description: "Failed to add transaction.",
+        description: "Failed to save transaction.",
         variant: "destructive",
       });
     }
@@ -281,6 +307,13 @@ const Index = () => {
 
   const handleShowTransactionForm = (type: 'expense' | 'income') => {
     setTransactionType(type);
+    setEditingTransaction(null);
+    setShowTransactionForm(true);
+  };
+
+  const handleEditTransaction = (transaction: Transaction) => {
+    setTransactionType(transaction.type);
+    setEditingTransaction(transaction);
     setShowTransactionForm(true);
   };
 
@@ -410,6 +443,7 @@ const Index = () => {
                 transactions={getFilteredTransactions()} 
                 categories={categories}
                 onDeleteTransaction={handleDeleteTransaction}
+                onEditTransaction={handleEditTransaction}
               />
             </TabsContent>
             
@@ -428,7 +462,11 @@ const Index = () => {
             categories={categories}
             transactionType={transactionType}
             onSubmit={handleAddTransaction}
-            onClose={() => setShowTransactionForm(false)}
+            onClose={() => {
+              setShowTransactionForm(false);
+              setEditingTransaction(null);
+            }}
+            editTransaction={editingTransaction}
           />
         )}
 

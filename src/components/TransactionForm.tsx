@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,14 +13,25 @@ interface Category {
   color: string;
 }
 
+interface Transaction {
+  id: number;
+  amount: number;
+  category_id: number;
+  description: string;
+  date: string;
+  created_at: string;
+  type: 'expense' | 'income';
+}
+
 interface TransactionFormProps {
   categories: Category[];
   transactionType: 'expense' | 'income';
   onSubmit: (transaction: any) => void;
   onClose: () => void;
+  editTransaction?: Transaction | null;
 }
 
-const TransactionForm = ({ categories, transactionType, onSubmit, onClose }: TransactionFormProps) => {
+const TransactionForm = ({ categories, transactionType, onSubmit, onClose, editTransaction }: TransactionFormProps) => {
   const [formData, setFormData] = useState({
     amount: "",
     category_id: "",
@@ -29,19 +40,38 @@ const TransactionForm = ({ categories, transactionType, onSubmit, onClose }: Tra
     type: transactionType,
   });
 
+  // Load existing transaction data when editing
+  useEffect(() => {
+    if (editTransaction) {
+      setFormData({
+        amount: editTransaction.amount.toString(),
+        category_id: editTransaction.category_id.toString(),
+        description: editTransaction.description || "",
+        date: editTransaction.date,
+        type: editTransaction.type,
+      });
+    }
+  }, [editTransaction]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.amount || !formData.category_id) {
       return;
     }
     
-    onSubmit({
+    const transactionData = {
       amount: parseFloat(formData.amount),
       category_id: parseInt(formData.category_id),
       description: formData.description,
       date: formData.date,
       type: formData.type,
-    });
+    };
+
+    if (editTransaction) {
+      onSubmit({ ...transactionData, id: editTransaction.id });
+    } else {
+      onSubmit(transactionData);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -49,21 +79,22 @@ const TransactionForm = ({ categories, transactionType, onSubmit, onClose }: Tra
   };
 
   const selectedCategory = categories.find(cat => cat.id.toString() === formData.category_id);
+  const isEditing = !!editTransaction;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <Card className="w-full max-w-md mx-auto">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-lg flex items-center">
-            {transactionType === 'expense' ? (
+            {formData.type === 'expense' ? (
               <>
                 <Minus className="w-5 h-5 mr-2 text-red-500" />
-                Add New Expense
+                {isEditing ? 'Edit Expense' : 'Add New Expense'}
               </>
             ) : (
               <>
                 <Plus className="w-5 h-5 mr-2 text-green-500" />
-                Add New Income
+                {isEditing ? 'Edit Income' : 'Add New Income'}
               </>
             )}
           </CardTitle>
@@ -158,13 +189,13 @@ const TransactionForm = ({ categories, transactionType, onSubmit, onClose }: Tra
               <Button 
                 type="submit" 
                 className={`flex-1 ${
-                  transactionType === 'expense' 
+                  formData.type === 'expense' 
                     ? 'bg-red-500 hover:bg-red-600' 
                     : 'bg-green-500 hover:bg-green-600'
                 }`}
                 disabled={!formData.amount || !formData.category_id || categories.length === 0}
               >
-                Add {transactionType === 'expense' ? 'Expense' : 'Income'}
+                {isEditing ? 'Update' : 'Add'} {formData.type === 'expense' ? 'Expense' : 'Income'}
               </Button>
             </div>
           </form>

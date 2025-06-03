@@ -23,9 +23,10 @@ interface TransactionListProps {
   transactions: Transaction[];
   categories: Category[];
   onDeleteTransaction: (id: number) => void;
+  onEditTransaction?: (transaction: Transaction) => void;
 }
 
-const TransactionList = ({ transactions, categories, onDeleteTransaction }: TransactionListProps) => {
+const TransactionList = ({ transactions, categories, onDeleteTransaction, onEditTransaction }: TransactionListProps) => {
   const getCategoryInfo = (categoryId: number) => {
     const category = categories.find(cat => cat.id === categoryId);
     return category || { name: "Unknown", color: "#9CA3AF" };
@@ -40,6 +41,11 @@ const TransactionList = ({ transactions, categories, onDeleteTransaction }: Tran
     });
   };
 
+  // Sort transactions by date (newest first)
+  const sortedTransactions = [...transactions].sort((a, b) => {
+    return new Date(b.date).getTime() - new Date(a.date).getTime();
+  });
+
   if (transactions.length === 0) {
     return (
       <Card className="text-center py-8">
@@ -53,7 +59,7 @@ const TransactionList = ({ transactions, categories, onDeleteTransaction }: Tran
 
   return (
     <div className="space-y-3">
-      {transactions.map((transaction) => {
+      {sortedTransactions.map((transaction) => {
         const categoryInfo = getCategoryInfo(transaction.category_id);
         return (
           <Card key={transaction.id} className="hover:shadow-md transition-shadow">
@@ -96,7 +102,12 @@ const TransactionList = ({ transactions, categories, onDeleteTransaction }: Tran
                   </div>
                 </div>
                 <div className="flex space-x-1 ml-2">
-                  <Button variant="ghost" size="sm" className="p-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="p-2"
+                    onClick={() => onEditTransaction?.(transaction)}
+                  >
                     <Edit className="w-4 h-4 text-gray-400" />
                   </Button>
                   <Button 
