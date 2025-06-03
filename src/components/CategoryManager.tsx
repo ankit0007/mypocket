@@ -1,9 +1,10 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { X, Plus, Trash2 } from "lucide-react";
+import { X, Plus, Trash2, Edit2, Save, XIcon } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -24,6 +25,11 @@ const CategoryManager = ({ categories, onClose, onCategoriesUpdate }: CategoryMa
   const [formData, setFormData] = useState({
     name: "",
     color: "#9CA3AF",
+  });
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    name: "",
+    color: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -87,6 +93,57 @@ const CategoryManager = ({ categories, onClose, onCategoriesUpdate }: CategoryMa
     }
   };
 
+  const handleEditCategory = (category: Category) => {
+    setEditingCategory(category);
+    setEditFormData({
+      name: category.name,
+      color: category.color,
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editFormData.name.trim() || !editingCategory) {
+      toast({
+        title: "Error",
+        description: "Category name is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .update({
+          name: editFormData.name.trim(),
+          color: editFormData.color,
+        })
+        .eq('id', editingCategory.id);
+
+      if (error) throw error;
+      
+      toast({
+        title: "Category Updated",
+        description: `Category "${editFormData.name}" has been updated.`,
+      });
+
+      setEditingCategory(null);
+      setEditFormData({ name: "", color: "" });
+    } catch (error: any) {
+      console.error('Error updating category:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update category.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCategory(null);
+    setEditFormData({ name: "", color: "" });
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 z-50">
       <Card className="w-full max-w-xs mx-auto max-h-[90vh] overflow-y-auto">
@@ -141,22 +198,74 @@ const CategoryManager = ({ categories, onClose, onCategoriesUpdate }: CategoryMa
             ) : (
               <div className="space-y-1 max-h-48 overflow-y-auto">
                 {categories.map((category) => (
-                  <div key={category.id} className="flex items-center justify-between p-2 border rounded-lg">
-                    <div className="flex items-center space-x-2 flex-1 min-w-0">
-                      <div 
-                        className="w-3 h-3 rounded-full flex-shrink-0" 
-                        style={{ backgroundColor: category.color }}
-                      />
-                      <span className="text-sm font-medium truncate">{category.name}</span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteCategory(category.id)}
-                      className="text-red-500 hover:text-red-700 flex-shrink-0 h-6 w-6 p-0"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
+                  <div key={category.id} className="p-2 border rounded-lg">
+                    {editingCategory?.id === category.id ? (
+                      // Edit Form
+                      <div className="space-y-2">
+                        <Input
+                          value={editFormData.name}
+                          onChange={(e) => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
+                          className="text-sm"
+                          placeholder="Category name"
+                        />
+                        <div className="flex gap-2 items-center">
+                          <Input
+                            type="color"
+                            value={editFormData.color}
+                            onChange={(e) => setEditFormData(prev => ({ ...prev, color: e.target.value }))}
+                            className="w-12 h-8 flex-shrink-0"
+                          />
+                          <div className="flex gap-1 flex-1">
+                            <Button
+                              size="sm"
+                              onClick={handleSaveEdit}
+                              className="flex-1 h-8 text-xs"
+                            >
+                              <Save className="w-3 h-3 mr-1" />
+                              Save
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={handleCancelEdit}
+                              className="flex-1 h-8 text-xs"
+                            >
+                              <XIcon className="w-3 h-3 mr-1" />
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      // Display Mode
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2 flex-1 min-w-0">
+                          <div 
+                            className="w-3 h-3 rounded-full flex-shrink-0" 
+                            style={{ backgroundColor: category.color }}
+                          />
+                          <span className="text-sm font-medium truncate">{category.name}</span>
+                        </div>
+                        <div className="flex gap-1 flex-shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditCategory(category)}
+                            className="text-blue-500 hover:text-blue-700 h-6 w-6 p-0"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteCategory(category.id)}
+                            className="text-red-500 hover:text-red-700 h-6 w-6 p-0"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
