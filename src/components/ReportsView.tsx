@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, PieChart, Pie, Cell } from "recharts";
@@ -196,7 +195,7 @@ const ReportsView = ({ transactions, categories }: ReportsViewProps) => {
           <CardTitle className="text-lg">Category Breakdown</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-64">
+          <div className="h-80">
             {getCategoryData().length === 0 ? (
               <div className="h-full flex items-center justify-center text-gray-500">
                 <div className="text-center">
@@ -205,26 +204,40 @@ const ReportsView = ({ transactions, categories }: ReportsViewProps) => {
                 </div>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={getCategoryData()}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    dataKey="total"
-                    label={({ category, total }) => `${category}: ₹${total.toFixed(0)}`}
-                    labelLine={false}
-                  >
-                    {getCategoryData().map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value: any) => [`₹${value.toFixed(2)}`, 'Total Amount']}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <div className="flex flex-col h-full">
+                <div className="flex-1">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={getCategoryData()}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={60}
+                        dataKey="total"
+                      >
+                        {getCategoryData().map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value: any) => [`₹${value.toFixed(2)}`, 'Total Amount']}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-4 text-xs">
+                  {getCategoryData().map((entry, index) => (
+                    <div key={index} className="flex items-center space-x-2">
+                      <div 
+                        className="w-3 h-3 rounded-sm flex-shrink-0"
+                        style={{ backgroundColor: entry.color }}
+                      />
+                      <span className="truncate font-medium">{entry.category}</span>
+                      <span className="text-gray-600">₹{entry.total.toFixed(0)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </CardContent>
